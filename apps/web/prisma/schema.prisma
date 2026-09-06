@@ -1,0 +1,194 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id               String            @id @default(uuid())
+  nombre           String
+  apellido         String
+  email            String            @unique
+  contrasena       String
+  telefono         String?
+  fechaRegistro    DateTime          @default(now())
+  movimientos      Movimiento[]
+  servicios        Servicio[]
+  deudas           Deuda[]
+  vehiculos        Vehiculo[]
+  alertas          Alerta[]
+  registrosAudio   RegistroWhatsApp[]
+  resumenesMensual ResumenMensual[]
+  productos        Producto[]
+  stocks           Stock[]
+  escaneos         Escaneo[]
+  listaCompras     ListaCompras[]
+}
+
+model Movimiento {
+  id          String   @id @default(uuid())
+  tipo        String   // "INGRESO" | "EGRESO"
+  monto       Float
+  categoria   String
+  descripcion String?
+  fecha       DateTime @default(now())
+  origen      String   // "MANUAL" | "WHATSAPP"
+  usuarioId   String
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+}
+
+model Servicio {
+  id             String            @id @default(uuid())
+  tipo           String            // "LUZ", "GAS", "INTERNET", etc.
+  nombreProveedor String
+  direccion      String?
+  usuarioId      String
+  usuario        Usuario           @relation(fields: [usuarioId], references: [id])
+  facturas       FacturaServicio[]
+}
+
+model FacturaServicio {
+  id               String   @id @default(uuid())
+  servicioId       String
+  servicio         Servicio @relation(fields: [servicioId], references: [id])
+  periodoDesde     DateTime
+  periodoHasta     DateTime
+  fechaVencimiento DateTime
+  monto            Float
+  estado           String   // "PENDIENTE", "VENCIDA", "PAGADA"
+  fechaPago        DateTime?
+}
+
+model Deuda {
+  id             String   @id @default(uuid())
+  nombre         String
+  montoTotal     Float
+  montoCuota     Float
+  cantidadCuotas Int
+  fechaInicio    DateTime
+  tasaInteres    Float?
+  usuarioId      String
+  usuario        Usuario  @relation(fields: [usuarioId], references: [id])
+  cuotas         Cuota[]
+}
+
+model Cuota {
+  id               String   @id @default(uuid())
+  deudaId          String
+  deuda            Deuda    @relation(fields: [deudaId], references: [id])
+  numeroCuota      Int
+  monto            Float
+  fechaVencimiento DateTime
+  estado           String   // "PENDIENTE", "ATRASADA", "PAGADA"
+  fechaPago        DateTime?
+}
+
+model Vehiculo {
+  id               String                @id @default(uuid())
+  marca            String
+  modelo           String
+  anio             Int
+  kilometrajeActual Int
+  usuarioId        String
+  usuario          Usuario               @relation(fields: [usuarioId], references: [id])
+  componentes      ComponenteVehiculo[]
+}
+
+model ComponenteVehiculo {
+  id                  String   @id @default(uuid())
+  vehiculoId          String
+  vehiculo            Vehiculo @relation(fields: [vehiculoId], references: [id])
+  tipoComponente      String   // "ACEITE", "CUBIERTAS", etc.
+  kmVidaUtil          Int
+  kmUltimoCambio      Int
+  fechaUltimoCambio   DateTime
+}
+
+model Alerta {
+  id          String   @id @default(uuid())
+  tipoAlerta  String   // "VENCIMIENTO_FACTURA", "MANTENIMIENTO_VEHICULO", etc.
+  descripcion String
+  fecha       DateTime @default(now())
+  estado      String   // "NO_LEIDA", "LEIDA"
+  referenciaId String? // ID de la entidad relacionada
+  usuarioId   String
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+}
+
+model RegistroWhatsApp {
+  id               String   @id @default(uuid())
+  audioUrl         String?  // Si se guarda el archivo
+  textoTranscrito  String?
+  montoDetectado   Float?
+  categoriaDetectada String?
+  estado           String   // "PENDIENTE", "PROCESADO", "CONFIRMADO", "CON_ERROR"
+  fecha            DateTime @default(now())
+  usuarioId        String
+  usuario          Usuario  @relation(fields: [usuarioId], references: [id])
+}
+
+model ResumenMensual {
+  id                  String   @id @default(uuid())
+  mes                 Int
+  anio                Int
+  totalIngresos       Float    @default(0)
+  totalEgresos        Float    @default(0)
+  saldo               Float    @default(0)
+  facturasPagadas     Int      @default(0)
+  facturasVencidas    Int      @default(0)
+  cuotasPagadas       Int      @default(0)
+  cuotasAtrasadas     Int      @default(0)
+  fechaGeneracion     DateTime @default(now())
+  estado              String   // "ABIERTO", "CERRADO"
+  usuarioId           String
+  usuario             Usuario  @relation(fields: [usuarioId], references: [id])
+}
+
+model Producto {
+  id             String   @id @default(uuid())
+  codigoBarra    String?
+  nombre         String
+  marca          String?
+  categoria      String?
+  unidadMedida   String?
+  usuarioId      String
+  usuario        Usuario  @relation(fields: [usuarioId], references: [id])
+  stocks         Stock[]
+  compras        ListaCompras[]
+}
+
+model Stock {
+  id               String   @id @default(uuid())
+  productoId       String
+  producto         Producto @relation(fields: [productoId], references: [id])
+  cantidad         Float
+  fechaIngreso     DateTime @default(now())
+  fechaVencimiento DateTime?
+  estado           String   // "DISPONIBLE", "AGOTADO", "VENCIDO"
+  usuarioId        String
+  usuario          Usuario  @relation(fields: [usuarioId], references: [id])
+}
+
+model Escaneo {
+  id               String   @id @default(uuid())
+  codigoBarra      String
+  productoDetectadoId String?
+  estado           String   // "PENDIENTE", "IDENTIFICADO", "NO_ENCONTRADO", "CONFIRMADO"
+  fecha            DateTime @default(now())
+  usuarioId        String
+  usuario          Usuario  @relation(fields: [usuarioId], references: [id])
+}
+
+model ListaCompras {
+  id         String   @id @default(uuid())
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id])
+  fechaAgregado DateTime @default(now())
+  comprado   Boolean  @default(false)
+  origen     String   // "MANUAL", "AUTOMATICO"
+  usuarioId  String
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+}
