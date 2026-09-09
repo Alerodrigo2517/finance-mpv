@@ -26,6 +26,7 @@ model Usuario {
   stocks           Stock[]
   escaneos         Escaneo[]
   listaCompras     ListaCompras[]
+  categorias       CategoriaUsuario[]
 }
 
 model Movimiento {
@@ -60,6 +61,10 @@ model FacturaServicio {
   monto            Float
   estado           String   // "PENDIENTE", "VENCIDA", "PAGADA"
   fechaPago        DateTime?
+  kwConsumidos     Float?
+  fechaEmision     DateTime?
+  proximaFechaVencimiento DateTime?
+  archivoUrl       String?
 }
 
 model Deuda {
@@ -191,4 +196,12 @@ model ListaCompras {
   origen     String   // "MANUAL", "AUTOMATICO"
   usuarioId  String
   usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+}
+
+model CategoriaUsuario {
+  id        String   @id @default(uuid())
+  nombre    String
+  tipo      String   // "INGRESO" | "EGRESO"
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
 }

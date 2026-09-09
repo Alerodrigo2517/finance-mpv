@@ -28,6 +28,9 @@ export default function DashboardLayout({
           <Link href="/herramientas" className="px-4 py-3 rounded-xl text-slate-500 font-medium hover:bg-slate-50 hover:text-slate-900 hover:translate-x-1 transition-all">
             Herramientas
           </Link>
+          <Link href="/configuracion" className="px-4 py-3 rounded-xl text-slate-500 font-medium hover:bg-slate-50 hover:text-slate-900 hover:translate-x-1 transition-all">
+            Configuración
+          </Link>
           
           <LogoutButton />
         </nav>

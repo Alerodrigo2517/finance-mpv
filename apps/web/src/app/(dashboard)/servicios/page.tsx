@@ -24,6 +24,11 @@ export default function ServiciosPage() {
   const [fMonto, setFMonto] = useState('');
   const [fVencimiento, setFVencimiento] = useState('');
 
+  // AI Upload State
+  const [showUploadAI, setShowUploadAI] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadResult, setUploadResult] = useState<any>(null);
+
   const fetchData = async () => {
     try {
       const [resS, resD] = await Promise.all([
@@ -88,12 +93,80 @@ export default function ServiciosPage() {
 
         {/* SERVICIOS CARD */}
         <div className="glass-panel p-8 flex flex-col gap-4">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center flex-wrap gap-2">
             <span className="text-xl font-semibold text-[#0F3160]">Servicios Activos</span>
-            <button className="btn-secondary text-sm px-3 py-1" onClick={() => setShowServicioForm(!showServicioForm)}>
-              {showServicioForm ? 'Cancelar' : '+ Agregar'}
-            </button>
+            <div className="flex gap-2">
+              <button className="btn-secondary text-sm px-3 py-1 bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 font-bold" onClick={() => setShowUploadAI(!showUploadAI)}>
+                ✨ Carga IA
+              </button>
+              <button className="btn-secondary text-sm px-3 py-1" onClick={() => setShowServicioForm(!showServicioForm)}>
+                {showServicioForm ? 'Cancelar' : '+ Agregar'}
+              </button>
+            </div>
           </div>
+
+          {showUploadAI && (
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-xl border border-purple-100 flex flex-col gap-4 animate-in fade-in zoom-in duration-300">
+              <h3 className="font-bold text-purple-900 flex items-center gap-2">
+                Sube tu factura (PDF)
+              </h3>
+              <p className="text-sm text-purple-700 leading-snug">
+                Nuestra IA extraerá automáticamente el proveedor, monto a pagar, kW consumidos y calculará tus fechas de vencimiento.
+              </p>
+              
+              {!uploadResult ? (
+                <div className="flex flex-col gap-2">
+                  <input 
+                    type="file" 
+                    accept="application/pdf"
+                    disabled={uploadingFile}
+                    className="text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700 cursor-pointer disabled:opacity-50 transition-colors"
+                    onChange={async (e) => {
+                      if (!e.target.files || e.target.files.length === 0) return;
+                      setUploadingFile(true);
+                      const formData = new FormData();
+                      formData.append('file', e.target.files[0]);
+                      try {
+                        const res = await fetch('/api/facturas/upload', {
+                          method: 'POST',
+                          body: formData
+                        });
+                        if (res.ok) {
+                          const data = await res.json();
+                          setUploadResult(data.parsedData);
+                          fetchData();
+                        } else {
+                          const err = await res.json();
+                          alert('Error: ' + err.error);
+                        }
+                      } catch (err) {
+                        alert('Error de red al procesar el archivo');
+                      } finally {
+                        setUploadingFile(false);
+                        e.target.value = '';
+                      }
+                    }}
+                  />
+                  {uploadingFile && <div className="text-sm font-medium text-purple-600 mt-2 flex items-center gap-2">
+                    <span className="animate-pulse">✨ Analizando documento con IA...</span>
+                  </div>}
+                </div>
+              ) : (
+                <div className="bg-white p-5 rounded-xl border border-emerald-200 mt-2 shadow-sm">
+                  <span className="font-bold text-emerald-600 block mb-3 text-lg">¡Factura cargada con éxito!</span>
+                  <div className="grid grid-cols-2 gap-3 text-sm text-slate-700">
+                    <div className="flex flex-col"><span className="text-slate-400 text-xs font-bold uppercase">Proveedor</span><span className="font-medium text-slate-900">{uploadResult.nombreProveedor}</span></div>
+                    <div className="flex flex-col"><span className="text-slate-400 text-xs font-bold uppercase">Monto</span><span className="font-bold text-danger">${uploadResult.monto}</span></div>
+                    {uploadResult.kwConsumidos && <div className="flex flex-col"><span className="text-slate-400 text-xs font-bold uppercase">Consumo</span><span className="font-medium text-slate-900">{uploadResult.kwConsumidos} kW</span></div>}
+                    <div className="flex flex-col"><span className="text-slate-400 text-xs font-bold uppercase">Vencimiento</span><span className="font-medium text-slate-900">{uploadResult.fechaVencimiento}</span></div>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100">
+                    <button onClick={() => { setUploadResult(null); setShowUploadAI(false); }} className="btn-primary w-full py-2">Excelente, cerrar</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {showServicioForm && (
             <form onSubmit={handleServicioSubmit} className="flex flex-col gap-3 mt-2 bg-slate-50 p-4 rounded-lg border border-slate-200">

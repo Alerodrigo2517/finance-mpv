@@ -23,6 +23,7 @@ export default function MovimientosPage() {
   const [tipo, setTipo] = useState('EGRESO');
   const [monto, setMonto] = useState('');
   const [categoria, setCategoria] = useState('');
+  const [categoriasOpt, setCategoriasOpt] = useState<{id: string, nombre: string, tipo: string}[]>([]);
   const [descripcion, setDescripcion] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
 
@@ -40,9 +41,39 @@ export default function MovimientosPage() {
     }
   };
 
+  const fetchCategorias = async () => {
+    try {
+      const res = await fetch('/api/categorias');
+      if (res.ok) {
+        const data = await res.json();
+        setCategoriasOpt(data);
+        // Set default category if none selected
+        if (!categoria && data.length > 0) {
+          const defaults = data.filter((c: any) => c.tipo === tipo);
+          if (defaults.length > 0) setCategoria(defaults[0].nombre);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     fetchMovimientos();
+    fetchCategorias();
   }, []);
+
+  // Update default category when 'tipo' changes
+  useEffect(() => {
+    const defaults = categoriasOpt.filter(c => c.tipo === tipo);
+    if (defaults.length > 0) {
+      // Solo cambiar si la actual no coincide con el tipo
+      const currentExists = defaults.find(c => c.nombre === categoria);
+      if (!currentExists) setCategoria(defaults[0].nombre);
+    } else {
+      setCategoria('');
+    }
+  }, [tipo, categoriasOpt]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,15 +159,30 @@ export default function MovimientosPage() {
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-sm text-slate-500">Categoría</label>
-            <input 
-              type="text" 
-              value={categoria} 
-              onChange={(e) => setCategoria(e.target.value)} 
-              required 
-              placeholder="Ej. Supermercado"
-              className="input-field"
-            />
+            <div className="flex justify-between items-center">
+              <label className="text-sm text-slate-500">Categoría</label>
+              <a href="/configuracion" className="text-xs text-primary hover:underline">Configurar</a>
+            </div>
+            {categoriasOpt.filter(c => c.tipo === tipo).length === 0 ? (
+              <select disabled className="input-field bg-slate-100 text-slate-400">
+                <option>Sin categorías - Ve a Configurar</option>
+              </select>
+            ) : (
+              <select 
+                value={categoria} 
+                onChange={(e) => setCategoria(e.target.value)} 
+                required 
+                className="input-field"
+              >
+                <option value="" disabled>Selecciona una...</option>
+                {categoriasOpt
+                  .filter(c => c.tipo === tipo)
+                  .map(c => (
+                    <option key={c.id} value={c.nombre}>{c.nombre}</option>
+                  ))
+                }
+              </select>
+            )}
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm text-slate-500">Descripción (Opcional)</label>
