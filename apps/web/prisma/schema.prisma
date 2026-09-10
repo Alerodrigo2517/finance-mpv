@@ -39,7 +39,9 @@ model Movimiento {
   fecha       DateTime @default(now())
   origen      String   // "MANUAL" | "WHATSAPP"
   usuarioId   String
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
 }
 
 model Servicio {
@@ -47,15 +49,19 @@ model Servicio {
   tipo           String            // "LUZ", "GAS", "INTERNET", etc.
   nombreProveedor String
   direccion      String?
+  nroCuenta      String?
+  nroMedidor     String?
   usuarioId      String
-  usuario        Usuario           @relation(fields: [usuarioId], references: [id])
+  usuario        Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   facturas       FacturaServicio[]
+
+  @@index([usuarioId])
 }
 
 model FacturaServicio {
   id               String   @id @default(uuid())
   servicioId       String
-  servicio         Servicio @relation(fields: [servicioId], references: [id])
+  servicio         Servicio @relation(fields: [servicioId], references: [id], onDelete: Cascade)
   periodoDesde     DateTime
   periodoHasta     DateTime
   fechaVencimiento DateTime
@@ -66,6 +72,8 @@ model FacturaServicio {
   fechaEmision     DateTime?
   proximaFechaVencimiento DateTime?
   archivoUrl       String?
+
+  @@index([servicioId])
 }
 
 model Deuda {
@@ -77,19 +85,23 @@ model Deuda {
   fechaInicio    DateTime
   tasaInteres    Float?
   usuarioId      String
-  usuario        Usuario  @relation(fields: [usuarioId], references: [id])
+  usuario        Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   cuotas         Cuota[]
+
+  @@index([usuarioId])
 }
 
 model Cuota {
   id               String   @id @default(uuid())
   deudaId          String
-  deuda            Deuda    @relation(fields: [deudaId], references: [id])
+  deuda            Deuda    @relation(fields: [deudaId], references: [id], onDelete: Cascade)
   numeroCuota      Int
   monto            Float
   fechaVencimiento DateTime
   estado           String   // "PENDIENTE", "ATRASADA", "PAGADA"
   fechaPago        DateTime?
+
+  @@index([deudaId])
 }
 
 model Vehiculo {
@@ -99,18 +111,22 @@ model Vehiculo {
   anio             Int
   kilometrajeActual Int
   usuarioId        String
-  usuario          Usuario               @relation(fields: [usuarioId], references: [id])
+  usuario          Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   componentes      ComponenteVehiculo[]
+
+  @@index([usuarioId])
 }
 
 model ComponenteVehiculo {
   id                  String   @id @default(uuid())
   vehiculoId          String
-  vehiculo            Vehiculo @relation(fields: [vehiculoId], references: [id])
+  vehiculo            Vehiculo @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
   tipoComponente      String   // "ACEITE", "CUBIERTAS", etc.
   kmVidaUtil          Int
   kmUltimoCambio      Int
   fechaUltimoCambio   DateTime
+
+  @@index([vehiculoId])
 }
 
 model Alerta {
@@ -121,7 +137,9 @@ model Alerta {
   estado      String   // "NO_LEIDA", "LEIDA"
   referenciaId String? // ID de la entidad relacionada
   usuarioId   String
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
 }
 
 model RegistroWhatsApp {
@@ -133,7 +151,9 @@ model RegistroWhatsApp {
   estado           String   // "PENDIENTE", "PROCESADO", "CONFIRMADO", "CON_ERROR"
   fecha            DateTime @default(now())
   usuarioId        String
-  usuario          Usuario  @relation(fields: [usuarioId], references: [id])
+  usuario          Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
 }
 
 model ResumenMensual {
@@ -150,7 +170,9 @@ model ResumenMensual {
   fechaGeneracion     DateTime @default(now())
   estado              String   // "ABIERTO", "CERRADO"
   usuarioId           String
-  usuario             Usuario  @relation(fields: [usuarioId], references: [id])
+  usuario             Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
 }
 
 model Producto {
@@ -161,21 +183,26 @@ model Producto {
   categoria      String?
   unidadMedida   String?
   usuarioId      String
-  usuario        Usuario  @relation(fields: [usuarioId], references: [id])
+  usuario        Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   stocks         Stock[]
   compras        ListaCompras[]
+
+  @@index([usuarioId])
 }
 
 model Stock {
   id               String   @id @default(uuid())
   productoId       String
-  producto         Producto @relation(fields: [productoId], references: [id])
+  producto         Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
   cantidad         Float
   fechaIngreso     DateTime @default(now())
   fechaVencimiento DateTime?
   estado           String   // "DISPONIBLE", "AGOTADO", "VENCIDO"
   usuarioId        String
-  usuario          Usuario  @relation(fields: [usuarioId], references: [id])
+  usuario          Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([productoId])
+  @@index([usuarioId])
 }
 
 model Escaneo {
@@ -185,18 +212,23 @@ model Escaneo {
   estado           String   // "PENDIENTE", "IDENTIFICADO", "NO_ENCONTRADO", "CONFIRMADO"
   fecha            DateTime @default(now())
   usuarioId        String
-  usuario          Usuario  @relation(fields: [usuarioId], references: [id])
+  usuario          Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
 }
 
 model ListaCompras {
   id         String   @id @default(uuid())
   productoId String
-  producto   Producto @relation(fields: [productoId], references: [id])
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
   fechaAgregado DateTime @default(now())
   comprado   Boolean  @default(false)
   origen     String   // "MANUAL", "AUTOMATICO"
   usuarioId  String
-  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([productoId])
+  @@index([usuarioId])
 }
 
 model CategoriaUsuario {
@@ -204,5 +236,7 @@ model CategoriaUsuario {
   nombre    String
   tipo      String   // "INGRESO" | "EGRESO"
   usuarioId String
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
 }

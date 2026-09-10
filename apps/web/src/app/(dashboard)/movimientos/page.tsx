@@ -231,16 +231,16 @@ export default function MovimientosPage() {
             ) : (
               movimientos.map((m) => (
                 <tr key={m.id}>
-                  <td className="p-4 border-b border-slate-200">{new Date(m.fecha).toLocaleDateString()}</td>
+                  <td className="p-4 border-b border-slate-200 text-[#0F3160] font-medium">{new Date(m.fecha).toLocaleDateString()}</td>
                   <td className={`p-4 border-b border-slate-200 font-semibold ${m.tipo === 'INGRESO' ? 'text-primary' : 'text-danger'}`}>
                     {m.tipo}
                   </td>
-                  <td className="p-4 border-b border-slate-200">{m.categoria}</td>
-                  <td className="p-4 border-b border-slate-200">{m.descripcion || '-'}</td>
+                  <td className="p-4 border-b border-slate-200 text-[#0F3160] font-medium">{m.categoria}</td>
+                  <td className="p-4 border-b border-slate-200 text-slate-600">{m.descripcion || '-'}</td>
                   <td className={`p-4 border-b border-slate-200 font-semibold ${m.tipo === 'INGRESO' ? 'text-primary' : 'text-danger'}`}>
                     {Number(m.monto).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
                   </td>
-                  <td className="p-4 border-b border-slate-200">{m.origen}</td>
+                  <td className="p-4 border-b border-slate-200 text-slate-600">{m.origen}</td>
                   <td className="p-4 border-b border-slate-200 text-right">
                     <div className="flex justify-end gap-2">
                       <button onClick={() => handleEdit(m)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">

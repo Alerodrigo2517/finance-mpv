@@ -9,7 +9,7 @@ export async function GET() {
     if (!session?.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
-    const usuarioId = (session.user as any).id;
+    const usuarioId = session.user.id;
 
     let categorias = await prisma.categoriaUsuario.findMany({
       where: { usuarioId },
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     if (!session?.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
-    const usuarioId = (session.user as any).id;
+    const usuarioId = session.user.id;
 
     const body = await request.json();
     const { nombre, tipo } = body;

@@ -8,7 +8,7 @@ export async function obtenerFacturasPorUsuario(
   usuarioId: string,
   estado?: string
 ): Promise<FacturaServicio[]> {
-  const whereClause: any = {
+  const whereClause: import('@prisma/client').Prisma.FacturaServicioWhereInput = {
     servicio: {
       usuarioId,
     },

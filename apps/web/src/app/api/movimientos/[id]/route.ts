@@ -12,7 +12,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const movId = resolvedParams.id;
 
     const mov = await prisma.movimiento.findUnique({ where: { id: movId } });
-    if (!mov || mov.usuarioId !== (session.user as any).id) {
+    if (!mov || mov.usuarioId !== session.user.id) {
        return NextResponse.json({ error: 'No autorizado o no encontrado' }, { status: 403 });
     }
 
@@ -46,7 +46,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     const movId = resolvedParams.id;
 
     const mov = await prisma.movimiento.findUnique({ where: { id: movId } });
-    if (!mov || mov.usuarioId !== (session.user as any).id) {
+    if (!mov || mov.usuarioId !== session.user.id) {
        return NextResponse.json({ error: 'No autorizado o no encontrado' }, { status: 403 });
     }
 

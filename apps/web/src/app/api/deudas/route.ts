@@ -8,7 +8,7 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     const deudas = await prisma.deuda.findMany({ 
-      where: { usuarioId: (session.user as any).id },
+      where: { usuarioId: session.user.id },
       include: { cuotas: true } 
     });
     return NextResponse.json(deudas);
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         montoCuota: montoCuota,
         cantidadCuotas: cantidadCuotas,
         fechaInicio: fechaInicio,
-        usuarioId: (session.user as any).id,
+        usuarioId: session.user.id,
         cuotas: {
           create: cuotasArray
         }

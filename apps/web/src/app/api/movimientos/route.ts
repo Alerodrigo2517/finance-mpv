@@ -9,7 +9,7 @@ export async function GET() {
     if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
     const movimientos = await prisma.movimiento.findMany({
-      where: { usuarioId: (session.user as any).id },
+      where: { usuarioId: session.user.id },
       orderBy: { fecha: 'desc' },
       take: 50,
     });
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         categoria: data.categoria,
         descripcion: data.descripcion,
         origen: data.origen || 'MANUAL',
-        usuarioId: (session.user as any).id,
+        usuarioId: session.user.id,
       },
     });
 

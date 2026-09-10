@@ -77,7 +77,7 @@ export async function actualizarEstadoFactura(
     throw new Error('Factura no encontrada o no pertenece al usuario');
   }
 
-  const dataToUpdate: any = { estado };
+  const dataToUpdate: import('@prisma/client').Prisma.FacturaServicioUpdateInput = { estado };
   if (estado === 'PAGADA') {
     dataToUpdate.fechaPago = new Date();
   } else if (estado === 'PENDIENTE') {

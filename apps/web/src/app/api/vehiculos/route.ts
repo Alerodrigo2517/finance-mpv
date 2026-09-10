@@ -8,7 +8,7 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     const vehiculos = await prisma.vehiculo.findMany({ 
-      where: { usuarioId: (session.user as any).id },
+      where: { usuarioId: session.user.id },
       include: { componentes: true }
     });
     return NextResponse.json(vehiculos);
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
         modelo: data.modelo,
         anio: parseInt(data.anio),
         kilometrajeActual: parseInt(data.kilometrajeActual),
-        usuarioId: (session.user as any).id,
+        usuarioId: session.user.id,
       },
     });
     return NextResponse.json(vehiculo, { status: 201 });

@@ -19,11 +19,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const facturaActualizada = await actualizarEstadoFactura(
       facturaId,
       data.estado,
-      (session.user as any).id
+      session.user.id
     );
 
     return NextResponse.json(facturaActualizada);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Error al actualizar factura' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error al actualizar factura' }, { status: 500 });
   }
 }

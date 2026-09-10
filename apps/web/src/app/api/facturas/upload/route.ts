@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
 
 
 export async function POST(request: Request) {
@@ -11,7 +13,7 @@ export async function POST(request: Request) {
     if (!session?.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
-    const usuarioId = (session.user as any).id;
+    const usuarioId = session.user.id;
 
     // 1. Get the file from FormData
     const formData = await request.formData();
@@ -22,14 +24,15 @@ export async function POST(request: Request) {
     }
 
     // 2. Convert file to base64 for Gemini
-    if (file.type !== 'application/pdf') {
-      return NextResponse.json({ error: 'Formato no soportado, por favor sube un PDF' }, { status: 400 });
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: 'Formato no soportado, por favor sube un PDF o una imagen (JPG/PNG)' }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
     const apiKey = process.env.GEMINI_API_KEY;
-    let parsedData: any;
+    let parsedData: Record<string, unknown> | null = null;
 
     if (!apiKey || apiKey === "pega_tu_clave_aqui") {
       // Mock data
@@ -47,39 +50,47 @@ export async function POST(request: Request) {
       await new Promise(r => setTimeout(r, 2000));
     } else {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-flash-latest",
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
+      });
 
       const prompt = `
         Eres un asistente financiero experto. Extrae la siguiente información de esta factura de servicios.
-        Devuelve ÚNICAMENTE un objeto JSON válido con las siguientes claves y formatos (si no encuentras un dato, ponlo como null):
-        - nombreProveedor: string (ej. Edesur, Metrogas, Claro)
-        - tipoServicio: string (debe ser LUZ, GAS, AGUA, INTERNET, o TELEFONIA)
-        - monto: number (el total a pagar, solo el número)
-        - kwConsumidos: number (si es luz, los kwh o kw totales. Si no hay, null)
-        - periodoDesde: string (formato YYYY-MM-DD)
-        - periodoHasta: string (formato YYYY-MM-DD)
-        - fechaEmision: string (formato YYYY-MM-DD)
-        - fechaVencimiento: string (formato YYYY-MM-DD)
-        - proximaFechaVencimiento: string (formato YYYY-MM-DD, si existe)
+        Debes devolver el resultado usando el siguiente esquema JSON (si no encuentras un dato o no aplica, usa null):
+        {
+          "nombreProveedor": "string (ej. Edesur, Metrogas, Claro)",
+          "tipoServicio": "string (debe ser estricto: LUZ, GAS, AGUA, INTERNET, o TELEFONIA)",
+          "monto": "number (el monto total a pagar)",
+          "fechaVencimiento": "string (formato YYYY-MM-DD)",
+          "periodoDesde": "string (formato YYYY-MM-DD) (si existe)",
+          "periodoHasta": "string (formato YYYY-MM-DD) (si existe)",
+          "kwConsumidos": "number (si es luz, los kWh consumidos, sino null)",
+          "fechaEmision": "string (formato YYYY-MM-DD) (si existe)",
+          "proximaFechaVencimiento": "string (formato YYYY-MM-DD) (si existe)",
+          "nroCuenta": "string (el número de cuenta, cliente, NIS o referencia de pago, ej. '05-5102', sino null)",
+          "nroMedidor": "string (el número de medidor si aplica, ej. '163123', sino null)"
+        }
       `;
 
-      // Pass the PDF directly to Gemini
-      const pdfPart = {
+      // Pass the file directly to Gemini
+      const filePart = {
         inlineData: {
           data: buffer.toString("base64"),
-          mimeType: "application/pdf"
+          mimeType: file.type
         }
       };
 
-      const result = await model.generateContent([prompt, pdfPart]);
-      const response = await result.response;
-      const textResult = response.text();
+      const result = await model.generateContent([prompt, filePart]);
+      const textResult = result.response.text();
       
-      const jsonStrMatch = textResult.match(/\{[\s\S]*\}/);
-      if (!jsonStrMatch) {
-        throw new Error('El modelo no devolvió un JSON válido');
+      try {
+        parsedData = JSON.parse(textResult);
+      } catch (e) {
+        throw new Error('El modelo no devolvió un JSON válido: ' + textResult);
       }
-      parsedData = JSON.parse(jsonStrMatch[0]);
     }
 
     // 4. Update Database
@@ -101,6 +112,17 @@ export async function POST(request: Request) {
       });
     }
 
+    // Guardar archivo físicamente
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'facturas');
+    await mkdir(uploadsDir, { recursive: true });
+    
+    // Extraer extensión del file.type o usar .pdf por defecto
+    const ext = file.type.split('/')[1] === 'jpeg' ? 'jpg' : file.type.split('/')[1] || 'pdf';
+    const fileName = `factura_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+    const filePath = path.join(uploadsDir, fileName);
+    await writeFile(filePath, buffer);
+    const archivoUrl = `/uploads/facturas/${fileName}`;
+
     const factura = await prisma.facturaServicio.create({
       data: {
         servicioId: servicio.id,
@@ -112,6 +134,7 @@ export async function POST(request: Request) {
         kwConsumidos: parsedData.kwConsumidos,
         fechaEmision: parsedData.fechaEmision ? new Date(parsedData.fechaEmision) : null,
         proximaFechaVencimiento: parsedData.proximaFechaVencimiento ? new Date(parsedData.proximaFechaVencimiento) : null,
+        archivoUrl: archivoUrl
       }
     });
 
@@ -134,8 +157,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, factura, parsedData });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error procesando factura:', error);
-    return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 });
+    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error interno' }, { status: 500 });
   }
 }

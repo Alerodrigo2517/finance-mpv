@@ -1,12 +1,31 @@
+'use client';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import LogoutButton from '@/components/LogoutButton';
-import { Wallet, Bell, Grid, MoreHorizontal } from 'lucide-react';
+import { Wallet, Bell, Grid, MoreHorizontal, LayoutDashboard, ArrowRightLeft, Receipt, Settings } from 'lucide-react';
 
 export default function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+
+  const navItems = [
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/movimientos', label: 'Movimientos', icon: ArrowRightLeft },
+    { href: '/servicios', label: 'Servicios & Deudas', icon: Receipt },
+    { href: '/herramientas', label: 'Herramientas', icon: Grid },
+    { href: '/configuracion', label: 'Configuración', icon: Settings },
+  ];
+
+  const mobileNavItems = [
+    { href: '/', label: 'Resumen', icon: Wallet },
+    { href: '/alertas', label: 'Alertas', icon: Bell },
+    { href: '/herramientas', label: 'Herramientas', icon: Grid },
+    { href: '/perfil', label: 'Más', icon: MoreHorizontal },
+  ];
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F8FAFC]">
       {/* Sidebar Fijo (Drawer lateral) - Oculto en móviles */}
@@ -16,21 +35,23 @@ export default function DashboardLayout({
         </div>
         
         <nav className="flex flex-col gap-1 flex-1">
-          <Link href="/" className="px-4 py-3 rounded-xl text-[#0F3160] bg-blue-50 border-l-4 border-primary font-bold transition-all">
-            Dashboard
-          </Link>
-          <Link href="/movimientos" className="px-4 py-3 rounded-xl text-slate-500 font-medium hover:bg-slate-50 hover:text-slate-900 hover:translate-x-1 transition-all">
-            Movimientos
-          </Link>
-          <Link href="/servicios" className="px-4 py-3 rounded-xl text-slate-500 font-medium hover:bg-slate-50 hover:text-slate-900 hover:translate-x-1 transition-all">
-            Servicios & Deudas
-          </Link>
-          <Link href="/herramientas" className="px-4 py-3 rounded-xl text-slate-500 font-medium hover:bg-slate-50 hover:text-slate-900 hover:translate-x-1 transition-all">
-            Herramientas
-          </Link>
-          <Link href="/configuracion" className="px-4 py-3 rounded-xl text-slate-500 font-medium hover:bg-slate-50 hover:text-slate-900 hover:translate-x-1 transition-all">
-            Configuración
-          </Link>
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+            return (
+              <Link 
+                key={item.href} 
+                href={item.href} 
+                className={`px-4 py-3 rounded-xl transition-all flex items-center gap-3 ${
+                  isActive 
+                    ? 'text-[#0F3160] bg-blue-50 border-l-4 border-primary font-bold' 
+                    : 'text-slate-500 font-medium hover:bg-slate-50 hover:text-slate-900 hover:translate-x-1'
+                }`}
+              >
+                <item.icon className="w-5 h-5" />
+                {item.label}
+              </Link>
+            );
+          })}
           
           <LogoutButton />
         </nav>
@@ -47,22 +68,23 @@ export default function DashboardLayout({
 
       {/* Bottom Navigation Bar (Sólo visible en móviles) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center p-2 pb-6 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <Link href="/" className="flex flex-col items-center p-2 text-slate-400 hover:text-[#0F3160]">
-          <Wallet className="w-6 h-6 mb-1" />
-          <span className="text-[10px] font-medium">Resumen</span>
-        </Link>
-        <Link href="/alertas" className="flex flex-col items-center p-2 text-slate-400 hover:text-[#0F3160]">
-          <Bell className="w-6 h-6 mb-1" />
-          <span className="text-[10px] font-medium">Alertas</span>
-        </Link>
-        <Link href="/herramientas" className="flex flex-col items-center p-2 text-[#0F3160] border-t-2 border-[#0F3160] -mt-[2px]">
-          <Grid className="w-6 h-6 mb-1 fill-[#0F3160]/10" />
-          <span className="text-[10px] font-bold">Herramientas</span>
-        </Link>
-        <Link href="/perfil" className="flex flex-col items-center p-2 text-slate-400 hover:text-[#0F3160]">
-          <MoreHorizontal className="w-6 h-6 mb-1" />
-          <span className="text-[10px] font-medium">Más</span>
-        </Link>
+        {mobileNavItems.map((item) => {
+          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+          return (
+            <Link 
+              key={item.href} 
+              href={item.href} 
+              className={`flex flex-col items-center p-2 ${
+                isActive 
+                  ? 'text-[#0F3160] border-t-2 border-[#0F3160] -mt-[2px]' 
+                  : 'text-slate-400 hover:text-[#0F3160]'
+              }`}
+            >
+              <item.icon className={`w-6 h-6 mb-1 ${isActive ? 'fill-[#0F3160]/10' : ''}`} />
+              <span className={`text-[10px] ${isActive ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );

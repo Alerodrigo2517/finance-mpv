@@ -12,7 +12,7 @@ export async function DELETE(
     if (!session?.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
-    const usuarioId = (session.user as any).id;
+    const usuarioId = session.user.id;
 
     const categoriaId = params.id;
 
@@ -45,7 +45,7 @@ export async function PUT(
     if (!session?.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
-    const usuarioId = (session.user as any).id;
+    const usuarioId = session.user.id;
     const categoriaId = params.id;
 
     const body = await request.json();

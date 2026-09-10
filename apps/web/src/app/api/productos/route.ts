@@ -8,7 +8,7 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     const productos = await prisma.producto.findMany({ 
-      where: { usuarioId: (session.user as any).id },
+      where: { usuarioId: session.user.id },
       include: { stocks: true }
     });
     return NextResponse.json(productos);
@@ -29,12 +29,12 @@ export async function POST(request: Request) {
         nombre: data.nombre,
         codigoBarra: data.codigoBarras,
         categoria: data.categoria || 'General',
-        usuarioId: (session.user as any).id,
+        usuarioId: session.user.id,
         stocks: {
           create: {
             cantidad: parseFloat(data.cantidad || '1'),
             estado: 'DISPONIBLE',
-            usuarioId: (session.user as any).id,
+            usuarioId: session.user.id,
           }
         }
       },

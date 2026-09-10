@@ -1,42 +1,64 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Search, Wifi, Droplet, Zap, Tv, Home, Shield, Receipt } from 'lucide-react';
+import { ChevronLeft, Plus, Receipt, Loader2, UploadCloud, FileText, Download, ExternalLink, Trash2, Camera } from 'lucide-react';
+import Link from 'next/link';
+import BarcodeScanner from '@/components/BarcodeScanner';
+import FacturasList from '@/components/FacturasList';
 
-type Servicio = { id: string; tipo: string; nombreProveedor: string; facturas?: any[] };
-type Deuda = { id: string; nombre: string; montoTotal: number; fechaInicio: string; cuotas?: any[] };
+type Factura = {
+  id: string;
+  monto: number;
+  estado: string;
+  fechaVencimiento: string;
+  periodoDesde?: string;
+  periodoHasta?: string;
+  kwConsumidos?: number;
+  archivoUrl?: string;
+};
+
+type Servicio = { 
+  id: string; 
+  tipo: string; 
+  nombreProveedor: string; 
+  nroCuenta?: string; 
+  nroMedidor?: string; 
+  facturas: Factura[] 
+};
 
 export default function ServiciosPage() {
   const [servicios, setServicios] = useState<Servicio[]>([]);
-  const [deudas, setDeudas] = useState<Deuda[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Master-Detail State
+  const [selectedServicioId, setSelectedServicioId] = useState<string | null>(null);
 
   // States for Modals/Forms
   const [showServicioForm, setShowServicioForm] = useState(false);
   const [sNombre, setSNombre] = useState('');
+  const [sCuenta, setSCuenta] = useState('');
+  const [sMedidor, setSMedidor] = useState('');
+  const [sMonto, setSMonto] = useState('');
+  const [sVencimiento, setSVencimiento] = useState('');
 
-  const [showDeudaForm, setShowDeudaForm] = useState(false);
-  const [dEntidad, setDEntidad] = useState('');
-  const [dMonto, setDMonto] = useState('');
-  const [dFecha, setDFecha] = useState('');
-
-  // Factura state
-  const [facturaServicioId, setFacturaServicioId] = useState<string | null>(null);
-  const [fMonto, setFMonto] = useState('');
-  const [fVencimiento, setFVencimiento] = useState('');
-
-  // AI Upload State
-  const [showUploadAI, setShowUploadAI] = useState(false);
-  const [uploadingFile, setUploadingFile] = useState(false);
+  // AI Upload State (Inside Detail view)
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadTab, setUploadTab] = useState<'manual' | 'archivo' | 'escaner'>('manual');
+  const [uploadStatus, setUploadStatus] = useState<{status: 'idle'|'loading'|'error'|'success', message: string}>({status: 'idle', message: ''});
   const [uploadResult, setUploadResult] = useState<any>(null);
+
+  // Manual Factura State
+  const [mF_Monto, setMF_Monto] = useState('');
+  const [mF_Vencimiento, setMF_Vencimiento] = useState('');
+  const [mF_Periodo, setMF_Periodo] = useState('');
+  const [mF_Consumo, setMF_Consumo] = useState('');
 
   const fetchData = async () => {
     try {
-      const [resS, resD] = await Promise.all([
-        fetch('/api/servicios'),
-        fetch('/api/deudas')
-      ]);
-      if (resS.ok) setServicios(await resS.json());
-      if (resD.ok) setDeudas(await resD.json());
+      const resS = await fetch('/api/servicios');
+      if (resS.ok) {
+        const data = await resS.json();
+        setServicios(data);
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -54,10 +76,10 @@ export default function ServiciosPage() {
       const res = await fetch('/api/servicios', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: sNombre }),
+        body: JSON.stringify({ nombre: sNombre, nroCuenta: sCuenta, nroMedidor: sMedidor, monto: sMonto, vencimiento: sVencimiento }),
       });
       if (res.ok) {
-        setSNombre('');
+        setSNombre(''); setSCuenta(''); setSMedidor(''); setSMonto(''); setSVencimiento('');
         setShowServicioForm(false);
         fetchData();
       }
@@ -66,322 +88,421 @@ export default function ServiciosPage() {
     }
   };
 
-  const handleDeudaSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGuardarFacturaIA = async (servicioId: string) => {
+    if (!uploadResult) return;
     try {
-      const res = await fetch('/api/deudas', {
+      setUploadStatus({status: 'loading', message: 'Guardando datos...'});
+
+      const resFactura = await fetch('/api/facturas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entidad: dEntidad, montoTotal: dMonto, fechaInicio: dFecha }),
+        body: JSON.stringify({
+          servicioId: servicioId,
+          monto: uploadResult.monto,
+          fechaVencimiento: uploadResult.fechaVencimiento,
+          periodoDesde: uploadResult.periodoDesde || uploadResult.fechaVencimiento,
+          periodoHasta: uploadResult.periodoHasta || uploadResult.fechaVencimiento,
+          fechaEmision: uploadResult.fechaEmision,
+          proximaFechaVencimiento: uploadResult.proximaFechaVencimiento,
+          kwConsumidos: uploadResult.kwConsumidos,
+          archivoUrl: uploadResult.archivoUrl
+        })
       });
-      if (res.ok) {
-        setDEntidad(''); setDMonto(''); setDFecha('');
-        setShowDeudaForm(false);
+
+      if (resFactura.ok) {
+        setUploadResult(null);
+        setShowUpload(false);
+        setUploadStatus({status: 'success', message: 'Guardado con éxito'});
+        setTimeout(() => setUploadStatus({status: 'idle', message: ''}), 2000);
         fetchData();
+      } else {
+        throw new Error("No se pudo guardar la factura");
       }
     } catch (e) {
-      console.error(e);
+      setUploadStatus({status: 'error', message: 'Ocurrió un error al guardar los datos.'});
     }
   };
 
+  const handleGuardarManual = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedServicioId) return;
+    try {
+      setUploadStatus({status: 'loading', message: 'Guardando factura...'});
+      const res = await fetch('/api/facturas/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          servicioId: selectedServicioId,
+          monto: mF_Monto,
+          fechaVencimiento: mF_Vencimiento,
+          periodoDesde: mF_Periodo,
+          periodoHasta: mF_Periodo,
+          kwConsumidos: mF_Consumo,
+        })
+      });
+      if (res.ok) {
+        setUploadStatus({status: 'success', message: 'Guardado con éxito'});
+        setMF_Monto(''); setMF_Vencimiento(''); setMF_Periodo(''); setMF_Consumo('');
+        setTimeout(() => {
+          setUploadStatus({status: 'idle', message: ''});
+          setShowUpload(false);
+        }, 2000);
+        fetchData();
+      } else {
+        throw new Error();
+      }
+    } catch(e) {
+      setUploadStatus({status: 'error', message: 'Error al guardar factura manual.'});
+    }
+  };
+
+  const handleScanSuccess = (decodedText: string) => {
+    // Por ahora prellenamos el formulario manual y pasamos a esa tab
+    alert('Código leído correctamente. Continúa con la carga manual.');
+    setUploadTab('manual');
+  };
+
+  const handleDeleteServicio = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!confirm('¿Estás seguro de que deseas eliminar este servicio y todas sus facturas?')) return;
+    try {
+      const res = await fetch(`/api/servicios/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        if (selectedServicioId === id) setSelectedServicioId(null);
+        fetchData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteFactura = async (id: string) => {
+    if (!confirm('¿Estás seguro de eliminar esta factura?')) return;
+    try {
+      const res = await fetch(`/api/facturas/${id}`, { method: 'DELETE' });
+      if (res.ok) fetchData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setUploadStatus({status: 'loading', message: 'Analizando con IA y guardando...'});
+    const formData = new FormData();
+    formData.append('file', e.target.files[0]);
+    try {
+      const res = await fetch('/api/facturas/upload', {
+        method: 'POST',
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUploadResult(data.parsedData);
+        setUploadStatus({status: 'idle', message: ''});
+      } else {
+        setUploadStatus({status: 'error', message: 'Error al procesar. Reintenta.'});
+      }
+    } catch (err) {
+      setUploadStatus({status: 'error', message: 'Error de red.'});
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  // Calculations for Master View
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  let gastoMesTotal = 0;
+  let pendientePagoTotal = 0;
+
+  servicios.forEach(s => {
+    if (s.facturas) {
+      s.facturas.forEach(f => {
+        const d = new Date(f.fechaVencimiento);
+        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear && f.estado !== 'PENDIENTE') {
+          gastoMesTotal += Number(f.monto);
+        }
+        if (f.estado === 'PENDIENTE') {
+          pendientePagoTotal += Number(f.monto);
+        }
+      });
+    }
+  });
+
+  const selectedServicio = servicios.find(s => s.id === selectedServicioId);
+
+  // Calculations for Detail View
+  let gastoAnoServicio = 0;
+  let pendientePagoServicio = 0;
+  let consumosAnuales: number[] = [];
+
+  if (selectedServicio?.facturas) {
+    selectedServicio.facturas.forEach(f => {
+      const d = new Date(f.fechaVencimiento);
+      if (d.getFullYear() === currentYear && f.estado !== 'PENDIENTE') {
+        gastoAnoServicio += Number(f.monto);
+      }
+      if (f.estado === 'PENDIENTE') {
+        pendientePagoServicio += Number(f.monto);
+      }
+      if (d.getFullYear() === currentYear && f.kwConsumidos) {
+        consumosAnuales.push(Number(f.kwConsumidos));
+      }
+    });
+  }
+  
+  const sortedFacturas = selectedServicio?.facturas ? [...selectedServicio.facturas].sort((a,b)=> new Date(b.fechaVencimiento).getTime() - new Date(a.fechaVencimiento).getTime()) : [];
+
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-2 text-[#0F3160]">Servicios y Deudas</h1>
-      <p className="text-lg text-slate-500 mb-6">Gestión de pagos fijos y préstamos</p>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-
-        {/* SERVICIOS CARD */}
-        <div className="glass-panel p-8 flex flex-col gap-4">
-          <div className="flex justify-between items-center flex-wrap gap-2">
-            <span className="text-xl font-semibold text-[#0F3160]">Servicios Activos</span>
-            <div className="flex gap-2">
-              <button className="btn-secondary text-sm px-3 py-1 bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 font-bold" onClick={() => setShowUploadAI(!showUploadAI)}>
-                ✨ Carga IA
-              </button>
-              <button className="btn-secondary text-sm px-3 py-1" onClick={() => setShowServicioForm(!showServicioForm)}>
-                {showServicioForm ? 'Cancelar' : '+ Agregar'}
-              </button>
-            </div>
-          </div>
-
-          {showUploadAI && (
-            <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-xl border border-purple-100 flex flex-col gap-4 animate-in fade-in zoom-in duration-300">
-              <h3 className="font-bold text-purple-900 flex items-center gap-2">
-                Sube tu factura (PDF)
-              </h3>
-              <p className="text-sm text-purple-700 leading-snug">
-                Nuestra IA extraerá automáticamente el proveedor, monto a pagar, kW consumidos y calculará tus fechas de vencimiento.
-              </p>
-              
-              {!uploadResult ? (
-                <div className="flex flex-col gap-2">
-                  <input 
-                    type="file" 
-                    accept="application/pdf"
-                    disabled={uploadingFile}
-                    className="text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700 cursor-pointer disabled:opacity-50 transition-colors"
-                    onChange={async (e) => {
-                      if (!e.target.files || e.target.files.length === 0) return;
-                      setUploadingFile(true);
-                      const formData = new FormData();
-                      formData.append('file', e.target.files[0]);
-                      try {
-                        const res = await fetch('/api/facturas/upload', {
-                          method: 'POST',
-                          body: formData
-                        });
-                        if (res.ok) {
-                          const data = await res.json();
-                          setUploadResult(data.parsedData);
-                          fetchData();
-                        } else {
-                          const err = await res.json();
-                          alert('Error: ' + err.error);
-                        }
-                      } catch (err) {
-                        alert('Error de red al procesar el archivo');
-                      } finally {
-                        setUploadingFile(false);
-                        e.target.value = '';
-                      }
-                    }}
-                  />
-                  {uploadingFile && <div className="text-sm font-medium text-purple-600 mt-2 flex items-center gap-2">
-                    <span className="animate-pulse">✨ Analizando documento con IA...</span>
-                  </div>}
-                </div>
-              ) : (
-                <div className="bg-white p-5 rounded-xl border border-emerald-200 mt-2 shadow-sm">
-                  <span className="font-bold text-emerald-600 block mb-3 text-lg">¡Factura cargada con éxito!</span>
-                  <div className="grid grid-cols-2 gap-3 text-sm text-slate-700">
-                    <div className="flex flex-col"><span className="text-slate-400 text-xs font-bold uppercase">Proveedor</span><span className="font-medium text-slate-900">{uploadResult.nombreProveedor}</span></div>
-                    <div className="flex flex-col"><span className="text-slate-400 text-xs font-bold uppercase">Monto</span><span className="font-bold text-danger">${uploadResult.monto}</span></div>
-                    {uploadResult.kwConsumidos && <div className="flex flex-col"><span className="text-slate-400 text-xs font-bold uppercase">Consumo</span><span className="font-medium text-slate-900">{uploadResult.kwConsumidos} kW</span></div>}
-                    <div className="flex flex-col"><span className="text-slate-400 text-xs font-bold uppercase">Vencimiento</span><span className="font-medium text-slate-900">{uploadResult.fechaVencimiento}</span></div>
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-slate-100">
-                    <button onClick={() => { setUploadResult(null); setShowUploadAI(false); }} className="btn-primary w-full py-2">Excelente, cerrar</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {showServicioForm && (
-            <form onSubmit={handleServicioSubmit} className="flex flex-col gap-3 mt-2 bg-slate-50 p-4 rounded-lg border border-slate-200">
-              <input type="text" placeholder="Nombre (Ej. Internet)" value={sNombre} onChange={(e) => setSNombre(e.target.value)} required className="input-field" />
-              <button type="submit" className="btn-primary">Guardar</button>
-            </form>
-          )}
-
-          <div className="mt-4 flex flex-col gap-2">
-            {loading ? <p className="text-slate-500 text-center py-8">Cargando...</p> :
-              servicios.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-slate-200 rounded-xl mt-4">
-                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                    <Search className="w-8 h-8 text-slate-400" />
-                  </div>
-                  <h4 className="text-[#0F3160] font-bold mb-1">Sin servicios registrados</h4>
-                  <p className="text-slate-500 text-sm max-w-[220px]">Agrega tus servicios fijos para llevar un control mensual.</p>
-                  <button onClick={() => setShowServicioForm(true)} className="mt-4 text-primary font-medium text-sm hover:underline">
-                    + Agregar servicio
-                  </button>
-                </div>
-              ) :
-                servicios.map(s => {
-                const pendientes = s.facturas?.filter((f: any) => f.estado === 'PENDIENTE') || [];
-                
-                const getServiceIcon = (name: string) => {
-                  const n = name.toLowerCase();
-                  if (n.includes('internet') || n.includes('wifi') || n.includes('fibertel') || n.includes('telecentro') || n.includes('claro')) return <Wifi className="w-5 h-5 text-blue-500" />;
-                  if (n.includes('luz') || n.includes('edenor') || n.includes('edesur')) return <Zap className="w-5 h-5 text-amber-500" />;
-                  if (n.includes('agua') || n.includes('aysa')) return <Droplet className="w-5 h-5 text-cyan-500" />;
-                  if (n.includes('gas') || n.includes('metrogas')) return <Zap className="w-5 h-5 text-orange-500" />;
-                  if (n.includes('tv') || n.includes('cable') || n.includes('directv')) return <Tv className="w-5 h-5 text-purple-500" />;
-                  if (n.includes('seguro')) return <Shield className="w-5 h-5 text-emerald-500" />;
-                  if (n.includes('expensas') || n.includes('alquiler')) return <Home className="w-5 h-5 text-indigo-500" />;
-                  return <Receipt className="w-5 h-5 text-slate-400" />;
-                };
-
-                return (
-                 <div key={s.id} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3 group">
-                   <div className="flex justify-between items-start">
-                     <div className="flex items-center gap-3">
-                       <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0">
-                         {getServiceIcon(s.nombreProveedor)}
-                       </div>
-                       <div>
-                         <span className="font-bold text-[#0F3160] block leading-tight text-[15px]">{s.nombreProveedor}</span>
-                         <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">{s.tipo || 'General'}</span>
-                       </div>
-                     </div>
-                     <button 
-                       className={`transition-opacity bg-blue-50 text-[#0F3160] hover:bg-blue-100 font-bold text-xs px-3 py-1.5 rounded-lg whitespace-nowrap ${facturaServicioId === s.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-                       onClick={() => {
-                         if (facturaServicioId === s.id) {
-                           setFacturaServicioId(null);
-                         } else {
-                           setFacturaServicioId(s.id);
-                           setFMonto('');
-                           setFVencimiento('');
-                         }
-                       }}
-                     >
-                       {facturaServicioId === s.id ? 'Cancelar' : '+ Cargar Factura'}
-                     </button>
-                   </div>
-
-                   {facturaServicioId === s.id && (
-                     <form 
-                       className="mt-1 p-3 bg-blue-50/50 rounded-xl border border-blue-100 flex flex-col gap-2"
-                       onSubmit={(e) => {
-                         e.preventDefault();
-                         fetch('/api/facturas', {
-                           method: 'POST',
-                           headers: { 'Content-Type': 'application/json' },
-                           body: JSON.stringify({
-                             servicioId: s.id,
-                             monto: fMonto,
-                             fechaVencimiento: fVencimiento,
-                             periodoDesde: fVencimiento,
-                             periodoHasta: fVencimiento
-                           })
-                         }).then(() => {
-                           setFacturaServicioId(null);
-                           setFMonto('');
-                           setFVencimiento('');
-                           fetchData();
-                         });
-                       }}
-                     >
-                       <div className="flex gap-2">
-                         <input type="number" step="0.01" required placeholder="Monto ($)" value={fMonto} onChange={e => setFMonto(e.target.value)} className="input-field py-1.5 text-sm flex-1 bg-white" />
-                         <input type="date" required value={fVencimiento} onChange={e => setFVencimiento(e.target.value)} className="input-field py-1.5 text-sm flex-1 text-slate-500 bg-white" />
-                       </div>
-                       <div className="flex justify-end gap-2 mt-1">
-                         <button type="button" onClick={() => setFacturaServicioId(null)} className="text-xs text-slate-500 hover:text-slate-700 font-medium px-2 py-1">Cancelar</button>
-                         <button type="submit" className="bg-[#0F3160] hover:bg-[#0a244a] transition-colors text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm">Guardar Factura</button>
-                       </div>
-                     </form>
-                   )}
-                   
-                   {pendientes.length > 0 && <div className="h-px w-full bg-slate-100 my-1"></div>}
-                   
-                   {pendientes.length === 0 ? (
-                     <div className="flex items-center gap-2 mt-1 px-1">
-                       <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
-                       <span className="text-xs font-semibold text-slate-500">Al día</span>
-                     </div>
-                   ) : (
-                     <div className="flex flex-col gap-2">
-                       {pendientes.map((f: any) => {
-                         const mesFactura = new Date(f.periodoDesde || f.fechaVencimiento).toLocaleDateString('es-ES', { month: 'long', timeZone: 'UTC' });
-                         return (
-                           <div key={f.id} className="flex justify-between items-center p-3 bg-red-50/50 rounded-xl border border-red-100/50 group/factura">
-                             <div className="flex flex-col">
-                               <span className="text-sm font-bold text-slate-800 capitalize mb-0.5">
-                                 Período {mesFactura}
-                               </span>
-                               <div className="flex items-center gap-2">
-                                 <span className="text-sm font-black text-danger">{Number(f.monto).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</span>
-                                 <span className="text-[10px] text-red-600 font-medium bg-red-100 px-1.5 py-0.5 rounded">
-                                   Vence {new Date(f.fechaVencimiento).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', timeZone: 'UTC' })}
-                                 </span>
-                               </div>
-                             </div>
-                             <button 
-                               className="bg-white hover:bg-danger hover:text-white border border-red-200 text-danger px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-colors" 
-                               onClick={async () => {
-                                 await fetch(`/api/facturas/${f.id}`, { method: 'PATCH', body: JSON.stringify({ estado: 'PAGADA' }) });
-                                 fetchData();
-                               }}
-                             >
-                               Pagar
-                             </button>
-                           </div>
-                         );
-                       })}
-                     </div>
-                   )}
-                 </div>
-               );
-             })
-            }
-          </div>
-        </div>
-
-        {/* DEUDAS CARD */}
-        <div className="glass-panel p-8 flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <span className="text-xl font-semibold text-[#0F3160]">Deudas Pendientes</span>
-            <button className="btn-secondary text-sm px-3 py-1" onClick={() => setShowDeudaForm(!showDeudaForm)}>
-              {showDeudaForm ? 'Cancelar' : '+ Agregar'}
+    <div className="min-h-[calc(100vh-100px)] font-sans flex flex-col -m-4 sm:-m-8 p-4 sm:p-8">
+      
+      {/* HEADER TIPO APP */}
+      <div className="flex justify-between items-center mb-8 pt-2 shrink-0">
+        <div className="flex items-center gap-2">
+          {selectedServicioId && (
+            <button onClick={() => setSelectedServicioId(null)} className="text-slate-600 hover:text-slate-900 transition-colors mr-2 bg-slate-100 p-1 rounded-full hover:bg-slate-200">
+              <ChevronLeft className="w-6 h-6" />
             </button>
-          </div>
-
-          {showDeudaForm && (
-            <form onSubmit={handleDeudaSubmit} className="flex flex-col gap-3 mt-2 bg-slate-50 p-4 rounded-lg border border-slate-200">
-              <input type="text" placeholder="Entidad/Persona" value={dEntidad} onChange={(e) => setDEntidad(e.target.value)} required className="input-field" />
-              <input type="number" placeholder="Monto Total" value={dMonto} onChange={(e) => setDMonto(e.target.value)} required className="input-field" />
-              <input type="date" value={dFecha} onChange={(e) => setDFecha(e.target.value)} required className="input-field text-slate-500" />
-              <button type="submit" className="btn-primary">Guardar</button>
-            </form>
           )}
-
-          <div className="mt-4 flex flex-col gap-2">
-            {loading ? <p className="text-slate-500 text-center py-8">Cargando...</p> :
-              deudas.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-slate-200 rounded-xl mt-4">
-                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                    <Search className="w-8 h-8 text-slate-400" />
-                  </div>
-                  <h4 className="text-[#0F3160] font-bold mb-1">Sin deudas pendientes</h4>
-                  <p className="text-slate-500 text-sm max-w-[220px]">Registra una deuda o préstamo para seguir tus cuotas.</p>
-                  <button onClick={() => setShowDeudaForm(true)} className="mt-4 text-primary font-medium text-sm hover:underline">
-                    + Cargar deuda
-                  </button>
-                </div>
-              ) :
-                deudas.map(d => {
-               const pagadas = d.cuotas?.filter((c: any) => c.estado === 'PAGADA').length || 0;
-               const totales = d.cuotas?.length || 1;
-               const proxCuota = d.cuotas?.find((c: any) => c.estado === 'PENDIENTE');
-
-               return (
-                 <div key={d.id} className="p-3 bg-slate-50 rounded-md border border-slate-200 flex flex-col gap-2">
-                   <div className="flex justify-between">
-                     <div>
-                       <span className="font-bold text-[#0F3160] block">{d.nombre}</span>
-                       <span className="text-slate-500 text-sm">
-                         Progreso: {pagadas} / {totales} cuotas
-                       </span>
-                     </div>
-                     <span className="font-bold text-danger">{Number(d.montoTotal).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</span>
-                   </div>
-                   {proxCuota && (
-                     <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-200">
-                       <span className="text-sm text-slate-500">
-                         Próximo: {new Date(proxCuota.fechaVencimiento).toLocaleDateString()} ({Number(proxCuota.monto).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })})
-                       </span>
-                       <button 
-                         className="btn-primary px-3 py-1 text-xs" 
-                         onClick={async () => {
-                           await fetch(`/api/cuotas/${proxCuota.id}`, { method: 'PATCH', body: JSON.stringify({ estado: 'PAGADA' }) });
-                           fetchData();
-                         }}
-                       >
-                         Pagar
-                       </button>
-                     </div>
-                   )}
-                 </div>
-               );
-             })
-            }
-          </div>
+          <h1 className="text-xl font-bold text-[#0F3160] uppercase tracking-wide">Gestion de Servicios</h1>
+        </div>
+        <div className="flex gap-2">
+          <button className="text-xs font-bold uppercase border border-slate-300 bg-white text-slate-700 px-3 py-1.5 rounded-lg shadow-sm hover:bg-slate-50">
+            Importar
+          </button>
+          <button className="text-xs font-bold uppercase border border-slate-300 bg-white text-slate-700 px-3 py-1.5 rounded-lg shadow-sm hover:bg-slate-50">
+            Exportar
+          </button>
         </div>
       </div>
+
+      {loading ? (
+        <div className="flex justify-center items-center flex-1">
+          <Loader2 className="w-8 h-8 text-[#0F3160] animate-spin" />
+        </div>
+      ) : (
+        <div className="flex-1 w-full">
+          
+          {/* VISTA PRINCIPAL (Lista de Servicios) */}
+          {!selectedServicioId ? (
+            <div className="flex flex-col gap-6 w-full animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Top Summaries Left */}
+            <div className="flex justify-center gap-6">
+              <div className="bg-white border-2 border-slate-200 rounded-2xl px-6 py-4 flex flex-col items-center justify-center min-w-[140px] shadow-sm">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Gasto Mes</span>
+                <span className="text-xl font-black text-slate-800">{gastoMesTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="bg-white border-2 border-slate-200 rounded-2xl px-6 py-4 flex flex-col items-center justify-center min-w-[140px] shadow-sm">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Pendiente Pago</span>
+                <span className="text-xl font-black text-slate-800">{pendientePagoTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+
+            {/* List of Services */}
+            <div className="flex flex-col gap-4 mt-2">
+              {servicios.map(s => {
+                const fs = s.facturas ? [...s.facturas].sort((a,b)=> new Date(b.fechaVencimiento).getTime() - new Date(a.fechaVencimiento).getTime()) : [];
+                const ultimaFactura = fs[0];
+                const isSelected = selectedServicioId === s.id;
+
+                return (
+                  <div 
+                    key={s.id} 
+                    onClick={() => setSelectedServicioId(s.id)}
+                    className={`bg-white border-2 rounded-2xl p-5 cursor-pointer transition-all hover:shadow-md ${isSelected ? 'border-[#0F3160] ring-4 ring-blue-50' : 'border-slate-200 hover:border-slate-300'}`}
+                  >
+                    <div className="flex justify-end mb-2">
+                      <span className="font-black text-slate-800 text-lg">
+                        {ultimaFactura ? Number(ultimaFactura.monto).toLocaleString('es-AR', { minimumFractionDigits: 2 }) : '0,00'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-end">
+                      <span className="font-bold text-slate-800 text-xl tracking-wide">{s.nombreProveedor}</span>
+                      <div className="flex gap-2">
+                        {ultimaFactura && ultimaFactura.estado === 'PENDIENTE' ? (
+                          <div className="px-3 py-1 bg-red-50 text-red-600 border border-red-200 rounded-lg text-xs font-bold uppercase">Pendiente</div>
+                        ) : (
+                          <div className="px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-xs font-bold uppercase">Pagado</div>
+                        )}
+                        <button onClick={(e) => handleDeleteServicio(e, s.id)} className="px-3 py-1 bg-white text-red-500 border border-red-500 rounded-lg text-xs font-bold uppercase hover:bg-red-50 transition-colors">
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              <button 
+                onClick={() => setShowServicioForm(!showServicioForm)}
+                className="w-full bg-slate-100 hover:bg-slate-200 border-2 border-dashed border-slate-300 text-slate-600 font-bold py-4 rounded-2xl transition-colors flex justify-center items-center gap-2 mt-2"
+              >
+                <Plus className="w-5 h-5" /> Agregar Nuevo Servicio
+              </button>
+
+              {showServicioForm && (
+                <form onSubmit={handleServicioSubmit} className="flex flex-col gap-3 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 animate-in fade-in zoom-in duration-200">
+                  <h4 className="font-bold text-[#0F3160] mb-2 text-center">Nuevo Servicio y Factura Inicial</h4>
+                  <input type="text" placeholder="Nombre de servicio (Ej. EDEA)" value={sNombre} onChange={(e) => setSNombre(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input type="number" step="0.01" placeholder="Monto ($)" value={sMonto} onChange={(e) => setSMonto(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400" />
+                    <input type="date" value={sVencimiento} onChange={(e) => setSVencimiento(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input type="text" placeholder="Cuenta (Opcional)" value={sCuenta} onChange={(e) => setSCuenta(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400" />
+                    <input type="text" placeholder="Medidor (Opcional)" value={sMedidor} onChange={(e) => setSMedidor(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400" />
+                  </div>
+                  <button type="submit" className="w-full bg-[#0F3160] text-white font-bold py-3 rounded-xl mt-2 shadow-md">Guardar</button>
+                </form>
+              )}
+            </div>
+          </div>
+          ) : (
+          /* VISTA DETALLE (Un solo servicio) */
+          <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-right-8 duration-300">
+                {/* Top Summaries Right */}
+                <div className="flex justify-center gap-6">
+                  <div className="bg-white border-2 border-slate-200 rounded-2xl px-6 py-4 flex flex-col items-center justify-center min-w-[160px] shadow-sm">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 text-center leading-tight">Gasto de lo que<br/>va del año</span>
+                    <span className="text-xl font-black text-slate-800">{gastoAnoServicio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="bg-white border-2 border-slate-200 rounded-2xl px-6 py-4 flex flex-col items-center justify-center min-w-[140px] shadow-sm">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Pendiente Pago</span>
+                    <span className="text-xl font-black text-slate-800">{pendientePagoServicio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+
+                {/* Consumo Anual Bar */}
+                {consumosAnuales.length > 0 && (
+                  <div className="bg-white border-2 border-slate-200 rounded-2xl p-4 flex flex-col items-center shadow-sm">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Consumo anual ({consumosAnuales.reduce((a,b)=>a+b,0)} kW)</span>
+                    <div className="w-full flex h-8 gap-1 items-end">
+                      {consumosAnuales.slice(0, 12).map((val, idx) => {
+                        const max = Math.max(...consumosAnuales);
+                        const height = max > 0 ? (val / max) * 100 : 0;
+                        return (
+                          <div key={idx} className="flex-1 bg-blue-100 rounded-t-sm relative group" style={{ height: `${height}%` }}>
+                            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-0.5 px-1.5 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+                              {val}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center mt-2 px-2">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Todas las facturas de {currentYear} ({selectedServicio.nombreProveedor})
+                  </span>
+                  <button 
+                    onClick={() => setShowUpload(!showUpload)}
+                    className="text-[10px] font-bold bg-[#0F3160] text-white px-3 py-1.5 rounded-lg shadow-sm hover:bg-[#0a244a] transition-colors"
+                  >
+                    + Cargar factura
+                  </button>
+                </div>
+
+                {/* Upload Form */}
+                {showUpload && (
+                  <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5 animate-in slide-in-from-top-2">
+                    
+                    {/* TABS */}
+                    <div className="flex bg-white rounded-lg p-1 border border-blue-200 mb-4 shadow-sm">
+                      <button onClick={() => setUploadTab('manual')} className={`flex-1 py-2 text-xs font-bold rounded-md transition-colors ${uploadTab === 'manual' ? 'bg-[#0F3160] text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>Manual</button>
+                      <button onClick={() => setUploadTab('archivo')} className={`flex-1 py-2 text-xs font-bold rounded-md transition-colors ${uploadTab === 'archivo' ? 'bg-[#0F3160] text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>Archivo</button>
+                      <button onClick={() => setUploadTab('escaner')} className={`flex-1 py-2 text-xs font-bold rounded-md transition-colors ${uploadTab === 'escaner' ? 'bg-[#0F3160] text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>Escáner</button>
+                    </div>
+
+                    {uploadTab === 'archivo' && (
+                      <div className="animate-in fade-in zoom-in-95 duration-200">
+                        {!uploadResult ? (
+                          <label className="w-full flex flex-col items-center justify-center py-8 border-2 border-dashed border-[#0F3160]/20 rounded-xl bg-white hover:bg-blue-50/50 cursor-pointer transition-colors relative overflow-hidden">
+                            <input 
+                              type="file" 
+                              accept="application/pdf,image/jpeg,image/png,image/webp"
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                              disabled={uploadStatus.status === 'loading'}
+                              onChange={handleUploadFile}
+                            />
+                            {uploadStatus.status === 'loading' ? (
+                              <div className="flex flex-col items-center gap-2">
+                                <Loader2 className="w-8 h-8 text-[#0F3160] animate-spin" />
+                                <span className="text-sm font-bold text-[#0F3160]">{uploadStatus.message}</span>
+                              </div>
+                            ) : uploadStatus.status === 'error' ? (
+                              <div className="flex flex-col items-center gap-2">
+                                <span className="text-sm font-bold text-red-600">❌ {uploadStatus.message}</span>
+                                <span className="text-xs text-slate-400">Toca para intentar de nuevo</span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center gap-2 text-center px-4">
+                                <UploadCloud className="w-8 h-8 text-[#0F3160]/60" />
+                                <span className="text-sm font-bold text-[#0F3160]">Toca aquí para subir PDF o Imagen</span>
+                                <span className="text-[10px] text-slate-400">La IA extraerá automáticamente los datos</span>
+                              </div>
+                            )}
+                          </label>
+                        ) : (
+                          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                            <div className="flex justify-between items-center mb-3">
+                              <span className="font-bold text-slate-800 text-sm">Resumen detectado</span>
+                              <span className="text-lg font-black text-slate-900">${uploadResult.monto}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-y-2 text-xs text-slate-500 mb-4">
+                               <div className="flex flex-col"><span>Vencimiento:</span><span className="font-bold text-slate-700">{uploadResult.fechaVencimiento}</span></div>
+                               {uploadResult.kwConsumidos && <div className="flex flex-col"><span>Consumo:</span><span className="font-bold text-slate-700">{uploadResult.kwConsumidos} kW</span></div>}
+                            </div>
+                            <button onClick={() => handleGuardarFacturaIA(selectedServicio.id)} className="w-full bg-[#0F3160] hover:bg-[#0a244a] text-white font-bold py-3 rounded-xl transition-colors flex justify-center items-center gap-2">
+                              {uploadStatus.status === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
+                              Confirmar y Guardar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {uploadTab === 'escaner' && (
+                      <div className="animate-in fade-in zoom-in-95 duration-200">
+                        <BarcodeScanner onScanSuccess={handleScanSuccess} />
+                        <p className="text-xs text-center text-slate-500 mt-4">Apunta la cámara al código de barras de la factura física. (Si no tienes cámara, selecciona Manual).</p>
+                      </div>
+                    )}
+
+                    {uploadTab === 'manual' && (
+                      <form onSubmit={handleGuardarManual} className="flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="grid grid-cols-2 gap-3">
+                          <input type="number" step="0.01" placeholder="Monto ($)" value={mF_Monto} onChange={(e) => setMF_Monto(e.target.value)} required className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400 shadow-sm" />
+                          <input type="date" value={mF_Vencimiento} onChange={(e) => setMF_Vencimiento(e.target.value)} required className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400 shadow-sm" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <input type="date" placeholder="Periodo (Opcional)" value={mF_Periodo} onChange={(e) => setMF_Periodo(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400 shadow-sm" />
+                          <input type="number" step="0.01" placeholder="Consumo kW (Opcional)" value={mF_Consumo} onChange={(e) => setMF_Consumo(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400 shadow-sm" />
+                        </div>
+                        <button type="submit" disabled={uploadStatus.status === 'loading'} className="w-full bg-[#0F3160] hover:bg-[#0a244a] text-white font-bold py-3 rounded-xl shadow-md mt-2 transition-colors flex justify-center items-center gap-2">
+                          {uploadStatus.status === 'loading' ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Guardar Factura'}
+                        </button>
+                        {uploadStatus.status === 'success' && <p className="text-emerald-600 text-sm font-bold text-center mt-2">¡Guardado con éxito!</p>}
+                        {uploadStatus.status === 'error' && <p className="text-red-600 text-sm font-bold text-center mt-2">{uploadStatus.message}</p>}
+                      </form>
+                    )}
+                  </div>
+                )}
+
+                {/* List of Facturas for Detail */}
+                <FacturasList 
+                  facturas={sortedFacturas as any} 
+                  nombreProveedor={selectedServicio.nombreProveedor} 
+                  onDeleteFactura={handleDeleteFactura} 
+                />
+
+              </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     // 1. Llamar al Selector (sin lógica de base de datos directa aquí)
     // const { searchParams } = new URL(request.url);
     // const estado = searchParams.get('estado') || undefined;
-    const facturas = await obtenerFacturasPorUsuario((session.user as any).id);
+    const facturas = await obtenerFacturasPorUsuario(session.user.id);
     
     return NextResponse.json(facturas);
   } catch (error) {
@@ -39,11 +39,11 @@ export async function POST(request: Request) {
       periodoHasta: new Date(data.periodoHasta),
       fechaVencimiento: new Date(data.fechaVencimiento),
       monto: parseFloat(data.monto),
-    }, (session.user as any).id);
+    }, session.user.id);
 
     // 3. Devolver respuesta
     return NextResponse.json(nuevaFactura, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Error al registrar factura' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error al registrar factura' }, { status: 500 });
   }
 }
