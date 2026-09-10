@@ -32,7 +32,8 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
 
     const apiKey = process.env.GEMINI_API_KEY;
-    let parsedData: Record<string, unknown> | null = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let parsedData: any = null;
 
     if (!apiKey || apiKey === "pega_tu_clave_aqui") {
       // Mock data

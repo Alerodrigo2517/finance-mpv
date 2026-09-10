@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/authOptions';
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -38,7 +38,7 @@ export async function DELETE(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     const session = await getServerSession(authOptions);

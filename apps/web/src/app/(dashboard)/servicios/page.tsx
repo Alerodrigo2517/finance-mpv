@@ -396,7 +396,7 @@ export default function ServiciosPage() {
 
                 <div className="flex justify-between items-center mt-2 px-2">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Todas las facturas de {currentYear} ({selectedServicio.nombreProveedor})
+                    Todas las facturas de {currentYear} ({selectedServicio?.nombreProveedor})
                   </span>
                   <button 
                     onClick={() => setShowUpload(!showUpload)}
@@ -456,7 +456,7 @@ export default function ServiciosPage() {
                                <div className="flex flex-col"><span>Vencimiento:</span><span className="font-bold text-slate-700">{uploadResult.fechaVencimiento}</span></div>
                                {uploadResult.kwConsumidos && <div className="flex flex-col"><span>Consumo:</span><span className="font-bold text-slate-700">{uploadResult.kwConsumidos} kW</span></div>}
                             </div>
-                            <button onClick={() => handleGuardarFacturaIA(selectedServicio.id)} className="w-full bg-[#0F3160] hover:bg-[#0a244a] text-white font-bold py-3 rounded-xl transition-colors flex justify-center items-center gap-2">
+                            <button onClick={() => handleGuardarFacturaIA(selectedServicio?.id || '')} className="w-full bg-[#0F3160] hover:bg-[#0a244a] text-white font-bold py-3 rounded-xl transition-colors flex justify-center items-center gap-2">
                               {uploadStatus.status === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
                               Confirmar y Guardar
                             </button>
@@ -495,7 +495,7 @@ export default function ServiciosPage() {
                 {/* List of Facturas for Detail */}
                 <FacturasList 
                   facturas={sortedFacturas as any} 
-                  nombreProveedor={selectedServicio.nombreProveedor} 
+                  nombreProveedor={selectedServicio?.nombreProveedor || ''} 
                   onDeleteFactura={handleDeleteFactura} 
                 />
 
