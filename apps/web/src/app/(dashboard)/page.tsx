@@ -35,9 +35,9 @@ export default async function Home() {
   saldo = ingresos - egresos;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6 md:gap-8">
       {/* Hero Section */}
-      <div className="bg-[#0F3160] rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="bg-[#0F3160] rounded-3xl p-6 md:p-12 shadow-2xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         {/* Adorno visual sutil de fondo */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
         
@@ -45,8 +45,8 @@ export default async function Home() {
           <span className="text-blue-200 font-medium text-lg uppercase tracking-wider">
             Resumen de tu mes
           </span>
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-5xl md:text-6xl font-bold text-white tracking-tight">
+          <div className="flex items-baseline gap-2 md:gap-3">
+            <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">
               {saldo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
             </h1>
             <span className={`text-xl font-medium ${saldo >= 0 ? 'text-primary' : 'text-danger'}`}>
@@ -61,14 +61,14 @@ export default async function Home() {
             </div>
             <div className="w-px h-10 bg-white/20 self-center"></div>
             <div className="flex flex-col">
-              <span className="text-blue-200/70 text-sm">Egresos</span>
-              <span className="text-white font-semibold text-xl">-{egresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</span>
+              <span className="text-blue-200/70 text-xs md:text-sm">Egresos</span>
+              <span className="text-white font-semibold text-lg md:text-xl">-{egresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</span>
             </div>
           </div>
         </div>
 
-        <div className="z-10 mt-4 md:mt-0">
-          <a href="/resumenes" className="bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all font-medium py-3 px-6 rounded-xl inline-flex items-center gap-2 backdrop-blur-sm">
+        <div className="z-10 mt-2 md:mt-0 w-full md:w-auto">
+          <a href="/resumenes" className="w-full justify-center md:w-auto bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all font-medium py-3 px-6 rounded-xl inline-flex items-center gap-2 backdrop-blur-sm">
             Ver resumen completo
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
           </a>
@@ -76,9 +76,9 @@ export default async function Home() {
       </div>
 
       {/* Main Content Area para el Dashboard */}
-      <div className="mt-4 flex gap-4">
+      <div className="flex gap-4">
         {/* Aquí irían las listas recientes (movimientos, alertas) */}
-        <div className="glass-panel p-8 flex-1">
+        <div className="glass-panel p-4 md:p-8 flex-1">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-[#0F3160]">Últimos Movimientos</h2>
             <a href="/movimientos" className="text-primary hover:text-primaryHover font-medium text-sm transition-colors">Ver todos</a>
@@ -109,7 +109,7 @@ export default async function Home() {
       </div>
       
       {/* Botón Flotante (CTA Principal) */}
-      <div className="fixed bottom-8 right-8 z-50">
+      <div className="fixed bottom-24 md:bottom-8 right-4 md:right-8 z-30">
         <a href="/movimientos" className="bg-primary hover:bg-primaryHover text-[#0b0f19] p-4 rounded-full shadow-lg shadow-primary/20 flex items-center justify-center transition-transform hover:scale-105 group">
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
           {/* Tooltip on hover */}

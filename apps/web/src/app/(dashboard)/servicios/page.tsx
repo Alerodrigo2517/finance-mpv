@@ -279,14 +279,14 @@ export default function ServiciosPage() {
             <div className="flex flex-col gap-6 w-full animate-in fade-in zoom-in-95 duration-200">
             
             {/* Top Summaries Left */}
-            <div className="flex justify-center gap-6">
-              <div className="bg-white border-2 border-slate-200 rounded-2xl px-6 py-4 flex flex-col items-center justify-center min-w-[140px] shadow-sm">
+            <div className="flex justify-center gap-3 sm:gap-6">
+              <div className="bg-white border-2 border-slate-200 rounded-2xl px-3 sm:px-6 py-4 flex flex-col items-center justify-center flex-1 sm:flex-none sm:min-w-[140px] shadow-sm text-center">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Gasto Mes</span>
-                <span className="text-xl font-black text-slate-800">{gastoMesTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                <span className="text-lg sm:text-xl font-black text-slate-800">{gastoMesTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
               </div>
-              <div className="bg-white border-2 border-slate-200 rounded-2xl px-6 py-4 flex flex-col items-center justify-center min-w-[140px] shadow-sm">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Pendiente Pago</span>
-                <span className="text-xl font-black text-slate-800">{pendientePagoTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+              <div className="bg-white border-2 border-slate-200 rounded-2xl px-3 sm:px-6 py-4 flex flex-col items-center justify-center flex-1 sm:flex-none sm:min-w-[140px] shadow-sm text-center">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Pendiente</span>
+                <span className="text-lg sm:text-xl font-black text-slate-800">{pendientePagoTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
 
@@ -353,14 +353,14 @@ export default function ServiciosPage() {
           /* VISTA DETALLE (Un solo servicio) */
           <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-right-8 duration-300">
                 {/* Top Summaries Right */}
-                <div className="flex justify-center gap-6">
-                  <div className="bg-white border-2 border-slate-200 rounded-2xl px-6 py-4 flex flex-col items-center justify-center min-w-[160px] shadow-sm">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 text-center leading-tight">Gasto de lo que<br/>va del año</span>
-                    <span className="text-xl font-black text-slate-800">{gastoAnoServicio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                <div className="flex justify-center gap-3 sm:gap-6">
+                  <div className="bg-white border-2 border-slate-200 rounded-2xl px-3 sm:px-6 py-4 flex flex-col items-center justify-center flex-1 sm:flex-none sm:min-w-[160px] shadow-sm text-center">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 text-center leading-tight">Gasto <br className="sm:hidden" />del año</span>
+                    <span className="text-lg sm:text-xl font-black text-slate-800">{gastoAnoServicio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
                   </div>
-                  <div className="bg-white border-2 border-slate-200 rounded-2xl px-6 py-4 flex flex-col items-center justify-center min-w-[140px] shadow-sm">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Pendiente Pago</span>
-                    <span className="text-xl font-black text-slate-800">{pendientePagoServicio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                  <div className="bg-white border-2 border-slate-200 rounded-2xl px-3 sm:px-6 py-4 flex flex-col items-center justify-center flex-1 sm:flex-none sm:min-w-[140px] shadow-sm text-center">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Pendiente</span>
+                    <span className="text-lg sm:text-xl font-black text-slate-800">{pendientePagoServicio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
