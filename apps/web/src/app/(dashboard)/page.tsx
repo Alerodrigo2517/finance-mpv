@@ -30,6 +30,9 @@ export default async function Home() {
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
+  
+  const monthName = new Date(2000, currentMonth, 1).toLocaleString('es-ES', { month: 'long' });
+  const monthCapitalized = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
   movimientos.forEach(m => {
     // Saldo histórico global
@@ -56,7 +59,7 @@ export default async function Home() {
         
         <div className="z-10 flex flex-col gap-2">
           <span className="text-blue-200 font-medium text-lg uppercase tracking-wider">
-            Resumen de tu mes
+            Resumen de {monthCapitalized}
           </span>
           <div className="flex items-baseline gap-2 md:gap-3">
             <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">
