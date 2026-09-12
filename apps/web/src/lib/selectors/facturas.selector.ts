@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { Factura } from '@/types';
 
 /**
  * Obtiene todas las facturas de un usuario, opcionalmente filtradas por estado.
@@ -6,7 +7,7 @@ import { createClient } from '@/utils/supabase/server';
 export async function obtenerFacturasPorUsuario(
   usuarioId: string,
   estado?: string
-): Promise<any[]> {
+): Promise<Factura[]> {
   const supabase = await createClient();
 
   let query = supabase

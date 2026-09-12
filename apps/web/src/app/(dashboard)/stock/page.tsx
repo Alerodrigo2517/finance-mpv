@@ -4,7 +4,7 @@ import BlankState from '@/components/ui/BlankState';
 import PageHeader from '@/components/ui/PageHeader';
 import { ShoppingBag, Search } from 'lucide-react';
 
-type Producto = { id: string; nombre: string; categoria: string; codigoBarra: string | null; stocks?: any[] };
+import { Producto, Stock } from '@/types';
 
 export default function StockPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -92,7 +92,7 @@ export default function StockPage() {
                 </div>
               ) :
                 productos.map(p => {
-               const qty = p.stocks?.reduce((acc: number, s: any) => acc + s.cantidad, 0) || 0;
+               const qty = p.stocks?.reduce((acc: number, s: Stock) => acc + s.cantidad, 0) || 0;
                return (
                  <div key={p.id} className="p-3 bg-slate-50 rounded-md border border-slate-200 flex justify-between items-center">
                    <div>

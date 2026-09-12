@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { Movimiento } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -6,7 +7,7 @@ export default async function Home() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  let movimientos: any[] = [];
+  let movimientos: Movimiento[] = [];
   let ingresos = 0;
   let egresos = 0;
   let saldo = 0;

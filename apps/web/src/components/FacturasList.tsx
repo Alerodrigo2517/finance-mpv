@@ -1,14 +1,7 @@
 'use client';
 import { ExternalLink, Download } from 'lucide-react';
 
-type Factura = {
-  id: string;
-  periodoDesde?: string;
-  fechaVencimiento: string;
-  monto: number;
-  estado: string;
-  archivoUrl?: string;
-};
+import { Factura } from '@/types';
 
 interface FacturasListProps {
   facturas: Factura[];
@@ -23,7 +16,7 @@ export default function FacturasList({ facturas, nombreProveedor, onDeleteFactur
         <div className="text-center py-8 text-slate-400 text-sm">No hay facturas cargadas.</div>
       ) : (
         facturas.map((f) => {
-          const fechaBase = f.periodoDesde ? new Date(f.periodoDesde) : new Date(f.fechaVencimiento);
+          const fechaBase = f.periodoDesde ? new Date(f.periodoDesde) : new Date(f.fechaVencimiento || '');
           const mesNombre = fechaBase.toLocaleDateString('es-ES', { month: 'long', timeZone: 'UTC' });
           const mesCapitalizado = mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1);
           const esPendiente = f.estado === 'PENDIENTE';

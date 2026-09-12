@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { Factura } from '@/types';
 
 export type CrearFacturaData = {
   servicioId: string;
@@ -15,7 +16,7 @@ export type CrearFacturaData = {
 export async function crearFactura(
   data: CrearFacturaData,
   usuarioId: string
-): Promise<any> {
+): Promise<Factura> {
   const supabase = await createClient();
 
   const { data: servicio } = await supabase
@@ -52,7 +53,7 @@ export async function marcarFacturaComoPagada(
   facturaId: string,
   fechaPago: Date,
   usuarioId: string
-): Promise<any> {
+): Promise<Factura> {
   const supabase = await createClient();
 
   // RLS will ensure user owns the factura if policies are set correctly, 
@@ -88,7 +89,7 @@ export async function actualizarEstadoFactura(
   facturaId: string,
   estado: string,
   usuarioId: string
-): Promise<any> {
+): Promise<Factura> {
   const supabase = await createClient();
 
   const { data: factura } = await supabase
@@ -101,7 +102,7 @@ export async function actualizarEstadoFactura(
     throw new Error('Factura no encontrada o no pertenece al usuario');
   }
 
-  const dataToUpdate: any = { estado };
+  const dataToUpdate: Partial<Factura> & { fecha_pago?: string | null } = { estado: estado as Factura['estado'] };
   if (estado === 'PAGADA') {
     dataToUpdate.fecha_pago = new Date().toISOString();
   } else if (estado === 'PENDIENTE') {

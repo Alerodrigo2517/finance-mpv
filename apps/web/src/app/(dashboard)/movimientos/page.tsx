@@ -5,15 +5,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import BlankState from '@/components/ui/BlankState';
 import { FileText, Edit2, Trash2 } from 'lucide-react';
 
-type Movimiento = {
-  id: string;
-  tipo: string;
-  monto: number;
-  categoria: string;
-  descripcion: string | null;
-  fecha: string;
-  origen: string;
-};
+import { Movimiento } from '@/types';
 
 export default function MovimientosPage() {
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
@@ -49,7 +41,7 @@ export default function MovimientosPage() {
         setCategoriasOpt(data);
         // Set default category if none selected
         if (!categoria && data.length > 0) {
-          const defaults = data.filter((c: any) => c.tipo === tipo);
+          const defaults = data.filter((c: { tipo: string; nombre: string }) => c.tipo === tipo);
           if (defaults.length > 0) setCategoria(defaults[0].nombre);
         }
       }

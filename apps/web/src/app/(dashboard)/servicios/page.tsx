@@ -5,25 +5,7 @@ import Link from 'next/link';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import FacturasList from '@/components/FacturasList';
 
-type Factura = {
-  id: string;
-  monto: number;
-  estado: string;
-  fechaVencimiento: string;
-  periodoDesde?: string;
-  periodoHasta?: string;
-  kwConsumidos?: number;
-  archivoUrl?: string;
-};
-
-type Servicio = { 
-  id: string; 
-  tipo: string; 
-  nombreProveedor: string; 
-  nroCuenta?: string; 
-  nroMedidor?: string; 
-  facturas: Factura[] 
-};
+import { Servicio, Factura } from '@/types';
 
 export default function ServiciosPage() {
   const [servicios, setServicios] = useState<Servicio[]>([]);
@@ -44,7 +26,7 @@ export default function ServiciosPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [uploadTab, setUploadTab] = useState<'manual' | 'archivo' | 'escaner'>('manual');
   const [uploadStatus, setUploadStatus] = useState<{status: 'idle'|'loading'|'error'|'success', message: string}>({status: 'idle', message: ''});
-  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [uploadResult, setUploadResult] = useState<Partial<Factura> & { kwConsumidos?: number, fechaEmision?: string, proximaFechaVencimiento?: string } | null>(null);
 
   // Manual Factura State
   const [mF_Monto, setMF_Monto] = useState('');
@@ -219,7 +201,7 @@ export default function ServiciosPage() {
   servicios.forEach(s => {
     if (s.facturas) {
       s.facturas.forEach(f => {
-        const d = new Date(f.fechaVencimiento);
+        const d = new Date(f.fechaVencimiento || '');
         if (d.getMonth() === currentMonth && d.getFullYear() === currentYear && f.estado !== 'PENDIENTE') {
           gastoMesTotal += Number(f.monto);
         }
@@ -239,7 +221,7 @@ export default function ServiciosPage() {
 
   if (selectedServicio?.facturas) {
     selectedServicio.facturas.forEach(f => {
-      const d = new Date(f.fechaVencimiento);
+      const d = new Date(f.fechaVencimiento || '');
       if (d.getFullYear() === currentYear && f.estado !== 'PENDIENTE') {
         gastoAnoServicio += Number(f.monto);
       }
@@ -252,7 +234,7 @@ export default function ServiciosPage() {
     });
   }
   
-  const sortedFacturas = selectedServicio?.facturas ? [...selectedServicio.facturas].sort((a,b)=> new Date(b.fechaVencimiento).getTime() - new Date(a.fechaVencimiento).getTime()) : [];
+  const sortedFacturas = selectedServicio?.facturas ? [...selectedServicio.facturas].sort((a,b)=> new Date(b.fechaVencimiento || '').getTime() - new Date(a.fechaVencimiento || '').getTime()) : [];
 
   return (
     <div className="min-h-[calc(100vh-100px)] font-sans flex flex-col -m-4 sm:-m-8 p-4 sm:p-8">
@@ -303,7 +285,7 @@ export default function ServiciosPage() {
             {/* List of Services */}
             <div className="flex flex-col gap-4 mt-2">
               {servicios.map(s => {
-                const fs = s.facturas ? [...s.facturas].sort((a,b)=> new Date(b.fechaVencimiento).getTime() - new Date(a.fechaVencimiento).getTime()) : [];
+                const fs = s.facturas ? [...s.facturas].sort((a,b)=> new Date(b.fechaVencimiento || '').getTime() - new Date(a.fechaVencimiento || '').getTime()) : [];
                 const ultimaFactura = fs[0];
                 const isSelected = selectedServicioId === s.id;
 
@@ -494,7 +476,7 @@ export default function ServiciosPage() {
 
                 {/* List of Facturas for Detail */}
                 <FacturasList 
-                  facturas={sortedFacturas as any} 
+                  facturas={sortedFacturas} 
                   nombreProveedor={selectedServicio?.nombreProveedor || ''} 
                   onDeleteFactura={handleDeleteFactura} 
                 />

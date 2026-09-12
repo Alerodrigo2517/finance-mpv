@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 
-type Vehiculo = { id: string; marca: string; modelo: string; anio: number; kilometrajeActual: number; componentes?: any[] };
+import { Vehiculo, ComponenteVehiculo } from '@/types';
 
 export default function VehiculosPage() {
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
@@ -102,7 +102,7 @@ export default function VehiculosPage() {
                  </div>
                  {v.componentes && v.componentes.length > 0 && (
                    <div className="mt-2 text-xs text-slate-500">
-                     {v.componentes.map((c: any) => (
+                     {v.componentes.map((c: ComponenteVehiculo) => (
                        <span key={c.id} className="mr-2 inline-block bg-white/5 p-1 rounded">{c.tipoComponente}</span>
                      ))}
                    </div>
@@ -117,7 +117,7 @@ export default function VehiculosPage() {
           <span className="text-xl font-semibold text-[#0F3160]">Mantenimientos Recomendados</span>
           <div className="mt-4 flex flex-col gap-2">
             {vehiculos.flatMap(v => v.componentes?.map(c => {
-               const kmParaCambio = (c.kmUltimoCambio + c.kmVidaUtil) - v.kilometrajeActual;
+               const kmParaCambio = ((c.kmUltimoCambio || 0) + (c.kmVidaUtil || 0)) - (v.kilometrajeActual || 0);
                if (kmParaCambio > 2000) return null; // Aún falta mucho
                
                const isDanger = kmParaCambio < 0;

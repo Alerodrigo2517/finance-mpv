@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 
 export async function DELETE(
   request: Request,
-  { params }: any
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -13,7 +13,7 @@ export async function DELETE(
     }
     const usuarioId = user.id;
 
-    const categoriaId = params.id;
+    const { id: categoriaId } = await params;
 
     const { data: categoria } = await supabase
       .from('categoria_usuarios')
@@ -39,7 +39,7 @@ export async function DELETE(
 
 export async function PUT(
   request: Request,
-  { params }: any
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -48,7 +48,7 @@ export async function PUT(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
     const usuarioId = user.id;
-    const categoriaId = params.id;
+    const { id: categoriaId } = await params;
 
     const body = await request.json();
     const { nombre } = body;
