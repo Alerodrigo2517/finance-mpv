@@ -126,8 +126,8 @@ export default async function ResumenesPage(props: { searchParams: Promise<{ [ke
       />
 
       {/* Tarjetas de KPIs (Mes actual) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass-panel p-6 flex flex-col gap-2 relative overflow-hidden group">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+        <div className="glass-panel p-5 md:p-6 flex flex-col gap-1 md:gap-2 relative overflow-hidden group">
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
           <span className="text-slate-500 font-medium text-sm">Saldo Actual</span>
           <span className={`text-3xl md:text-4xl font-bold ${saldo >= 0 ? 'text-slate-800' : 'text-danger'}`}>
@@ -135,7 +135,7 @@ export default async function ResumenesPage(props: { searchParams: Promise<{ [ke
           </span>
         </div>
 
-        <div className="glass-panel p-6 flex flex-col gap-2 relative overflow-hidden group">
+        <div className="glass-panel p-5 md:p-6 flex flex-col gap-1 md:gap-2 relative overflow-hidden group">
            <div className="absolute -right-4 -top-4 w-24 h-24 bg-green-500/10 rounded-full blur-2xl group-hover:bg-green-500/20 transition-all"></div>
           <span className="text-slate-500 font-medium text-sm">Ingresos del mes</span>
           <span className="text-2xl font-bold text-green-600">
@@ -143,7 +143,7 @@ export default async function ResumenesPage(props: { searchParams: Promise<{ [ke
           </span>
         </div>
 
-        <div className="glass-panel p-6 flex flex-col gap-2 relative overflow-hidden group">
+        <div className="glass-panel p-5 md:p-6 flex flex-col gap-1 md:gap-2 relative overflow-hidden group">
            <div className="absolute -right-4 -top-4 w-24 h-24 bg-danger/10 rounded-full blur-2xl group-hover:bg-danger/20 transition-all"></div>
           <span className="text-slate-500 font-medium text-sm">Egresos del mes</span>
           <span className="text-2xl font-bold text-danger">
@@ -153,14 +153,14 @@ export default async function ResumenesPage(props: { searchParams: Promise<{ [ke
       </div>
 
       {/* Desglose de Gastos */}
-      <div className="glass-panel p-6 md:p-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b border-slate-100 pb-4">
+      <div className="glass-panel p-5 md:p-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5 md:mb-6 border-b border-slate-100 pb-4">
           <h2 className="text-xl font-bold text-slate-800">
             Gastos por Categoría
           </h2>
           <Link 
             href={`/movimientos?mes=${targetMes}&anio=${targetAnio}`} 
-            className="text-sm font-bold text-[#0F3160] hover:text-white bg-blue-50 hover:bg-[#0F3160] px-5 py-2.5 rounded-xl transition-colors border border-[#0F3160]/10 flex items-center gap-2"
+            className="text-sm font-bold text-[#0F3160] hover:text-white bg-blue-50 hover:bg-[#0F3160] px-5 py-2.5 rounded-xl transition-colors border border-[#0F3160]/10 flex items-center gap-2 w-full sm:w-auto justify-center"
           >
             Ver detalles de movimiento
           </Link>
@@ -205,9 +205,9 @@ export default async function ResumenesPage(props: { searchParams: Promise<{ [ke
             Aún no tienes resúmenes de meses anteriores cerrados.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {visibleHistoriales.map((h) => (
-              <Link key={h.id} href={`/resumenes?mes=${h.mes}&anio=${h.anio}`} className="glass-panel p-6 hover:border-primary/50 hover:shadow-md transition-all group block cursor-pointer">
+              <Link key={h.id} href={`/resumenes?mes=${h.mes}&anio=${h.anio}`} className="glass-panel p-5 md:p-6 hover:border-primary/50 hover:shadow-md transition-all group block cursor-pointer">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-bold text-slate-800 capitalize">{getMonthName(h.mes)} {h.anio}</h3>
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${h.estado === 'CERRADO' ? 'bg-slate-100 text-slate-600' : 'bg-primary/10 text-primary'}`}>

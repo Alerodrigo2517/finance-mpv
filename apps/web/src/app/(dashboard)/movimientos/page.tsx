@@ -211,15 +211,15 @@ function MovimientosContent() {
           </button>
         )}
         <h3 className="text-xl font-semibold mb-4 text-[#0F3160]">{editId ? 'Editar Movimiento' : 'Cargar Nuevo'}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="flex flex-col gap-1">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+          <div className="flex flex-col gap-1 col-span-1">
             <label className="text-sm text-slate-500">Tipo</label>
             <select value={tipo} onChange={(e) => setTipo(e.target.value)} required className="input-field">
               <option value="EGRESO">Egreso (Gasto)</option>
               <option value="INGRESO">Ingreso</option>
             </select>
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 col-span-1">
             <label className="text-sm text-slate-500">Fecha</label>
             <input 
               type="date" 
@@ -229,7 +229,7 @@ function MovimientosContent() {
               className="input-field"
             />
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 col-span-1">
             <label className="text-sm text-slate-500">Monto</label>
             <input 
               type="number" 
@@ -241,7 +241,7 @@ function MovimientosContent() {
               className="input-field"
             />
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 col-span-1">
             <div className="flex justify-between items-center">
               <label className="text-sm text-slate-500">Categoría</label>
               <a href="/configuracion" className="text-xs text-primary hover:underline">Configurar</a>
@@ -267,7 +267,7 @@ function MovimientosContent() {
               </select>
             )}
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 col-span-2 lg:col-span-1">
             <label className="text-sm text-slate-500">Descripción (Opcional)</label>
             <input 
               type="text" 
@@ -278,7 +278,7 @@ function MovimientosContent() {
             />
           </div>
         </div>
-        <button type="submit" className="btn-primary self-start mt-2">
+        <button type="submit" className="btn-primary w-full md:w-auto md:self-start mt-2">
           {editId ? 'Guardar Cambios' : 'Guardar'}
         </button>
       </form>
