@@ -1,10 +1,13 @@
 import { createClient } from '@/utils/supabase/server';
 import PageHeader from '@/components/ui/PageHeader';
 import { redirect } from 'next/navigation';
+import MonthFilter from './MonthFilter';
+import Link from 'next/link';
+import HistoryModal from './HistoryModal';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ResumenesPage() {
+export default async function ResumenesPage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -12,9 +15,19 @@ export default async function ResumenesPage() {
   }
   const usuarioId = user.id;
 
+  const resolvedParams = await props.searchParams;
+  const paramMes = resolvedParams.mes ? parseInt(resolvedParams.mes as string) : null;
+  const paramAnio = resolvedParams.anio ? parseInt(resolvedParams.anio as string) : null;
+
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+
+  const targetMes = paramMes || currentMonth;
+  const targetAnio = paramAnio || currentYear;
+
+  const startOfMonth = new Date(targetAnio, targetMes - 1, 1);
+  const endOfMonth = new Date(targetAnio, targetMes, 0, 23, 59, 59);
 
   // Fetch movimientos del mes actual
   const { data: movimientosMes } = await supabase
@@ -51,7 +64,7 @@ export default async function ResumenesPage() {
     .eq('usuario_id', usuarioId)
     .order('fecha', { ascending: false });
 
-  const currentMonthKey = `${now.getFullYear()}-${now.getMonth() + 1}`;
+  const targetMonthKey = `${targetAnio}-${targetMes}`;
   const agrupado: Record<string, { id: string, mes: number, anio: number, totalIngresos: number, totalEgresos: number, saldo: number, estado: string }> = {};
 
   (todosLosMovimientos || []).forEach(m => {
@@ -60,8 +73,8 @@ export default async function ResumenesPage() {
     const mes = date.getMonth() + 1;
     const key = `${anio}-${mes}`;
 
-    // Excluir el mes actual, ya que se muestra arriba en detalle
-    if (key === currentMonthKey) return;
+    // Excluir el mes actualmente visualizado
+    if (key === targetMonthKey) return;
 
     if (!agrupado[key]) {
       agrupado[key] = {
@@ -102,11 +115,14 @@ export default async function ResumenesPage() {
     return date.toLocaleString('es-ES', { month: 'long' });
   };
 
+  const visibleHistoriales = historiales.slice(0, 3);
+
   return (
-    <div className="flex flex-col gap-8 pb-12">
-      <PageHeader 
+    <div key={targetMonthKey} className="flex flex-col gap-8 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <PageHeader  
         title="Tu Resumen Financiero" 
-        subtitle={`Estado de cuentas del mes en curso (${getMonthName(now.getMonth() + 1)} ${now.getFullYear()})`} 
+        subtitle={`Estado de cuentas de ${getMonthName(targetMes)} ${targetAnio}`} 
+        action={<MonthFilter />}
       />
 
       {/* Tarjetas de KPIs (Mes actual) */}
@@ -138,9 +154,17 @@ export default async function ResumenesPage() {
 
       {/* Desglose de Gastos */}
       <div className="glass-panel p-6 md:p-8">
-        <h2 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-100 pb-4">
-          Gastos por Categoría
-        </h2>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b border-slate-100 pb-4">
+          <h2 className="text-xl font-bold text-slate-800">
+            Gastos por Categoría
+          </h2>
+          <Link 
+            href={`/movimientos?mes=${targetMes}&anio=${targetAnio}`} 
+            className="text-sm font-bold text-[#0F3160] hover:text-white bg-blue-50 hover:bg-[#0F3160] px-5 py-2.5 rounded-xl transition-colors border border-[#0F3160]/10 flex items-center gap-2"
+          >
+            Ver detalles de movimiento
+          </Link>
+        </div>
         
         {categoriasOrdenadas.length === 0 ? (
           <p className="text-slate-500 text-center py-6">No tienes egresos registrados este mes.</p>
@@ -171,17 +195,19 @@ export default async function ResumenesPage() {
       </div>
 
       {/* Historial de Resúmenes Anteriores */}
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold text-slate-800 mb-6">Historial de Meses</h2>
+      <div className="mt-8 flex flex-col gap-6">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-100 pb-4">
+          <h2 className="text-2xl font-bold text-slate-800">Historial de Meses</h2>
+        </div>
         
-        {historiales.length === 0 ? (
+        {visibleHistoriales.length === 0 ? (
           <div className="glass-panel p-8 text-center text-slate-500">
             Aún no tienes resúmenes de meses anteriores cerrados.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {historiales.map((h) => (
-              <div key={h.id} className="glass-panel p-6 hover:border-primary/30 transition-all group cursor-pointer">
+            {visibleHistoriales.map((h) => (
+              <Link key={h.id} href={`/resumenes?mes=${h.mes}&anio=${h.anio}`} className="glass-panel p-6 hover:border-primary/50 hover:shadow-md transition-all group block cursor-pointer">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-bold text-slate-800 capitalize">{getMonthName(h.mes)} {h.anio}</h3>
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${h.estado === 'CERRADO' ? 'bg-slate-100 text-slate-600' : 'bg-primary/10 text-primary'}`}>
@@ -204,8 +230,14 @@ export default async function ResumenesPage() {
                     <span className="text-danger font-medium">-{formatCurrency(h.totalEgresos)}</span>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
+          </div>
+        )}
+        
+        {historiales.length > 3 && (
+          <div className="flex justify-center mt-6">
+            <HistoryModal historiales={historiales} />
           </div>
         )}
       </div>

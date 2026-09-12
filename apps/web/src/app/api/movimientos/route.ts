@@ -1,18 +1,30 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
-    const { data: movimientos, error } = await supabase
-      .from('movimientos')
-      .select('*')
-      .order('fecha', { ascending: false })
-      .limit(50);
+    const { searchParams } = new URL(request.url);
+    const mes = searchParams.get('mes');
+    const anio = searchParams.get('anio');
+
+    let query = supabase.from('movimientos').select('*').order('fecha', { ascending: false });
+
+    if (mes && anio) {
+      const targetMes = parseInt(mes);
+      const targetAnio = parseInt(anio);
+      const startOfMonth = new Date(targetAnio, targetMes - 1, 1).toISOString();
+      const endOfMonth = new Date(targetAnio, targetMes, 0, 23, 59, 59).toISOString();
+      query = query.gte('fecha', startOfMonth).lte('fecha', endOfMonth);
+    } else {
+      query = query.limit(50);
+    }
+
+    const { data: movimientos, error } = await query;
 
     if (error) throw error;
     
@@ -38,7 +50,9 @@ export async function POST(request: Request) {
         monto: parseFloat(data.monto),
         categoria: data.categoria,
         descripcion: data.descripcion,
-        fecha: data.fecha ? new Date(data.fecha).toISOString() : new Date().toISOString(),
+        fecha: data.fecha 
+          ? (data.fecha.includes('T') ? new Date(data.fecha).toISOString() : new Date(`${data.fecha}T12:00:00Z`).toISOString())
+          : new Date().toISOString(),
         origen: data.origen || 'MANUAL',
         usuario_id: user.id, // Supabase schema uses usuario_id instead of usuarioId
       })

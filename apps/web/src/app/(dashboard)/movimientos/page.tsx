@@ -1,14 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import PageHeader from '@/components/ui/PageHeader';
 import BlankState from '@/components/ui/BlankState';
 import { ConfirmDeleteDialog } from '@/components/ui/ConfirmDeleteDialog';
-import { FileText, Edit2, Trash2 } from 'lucide-react';
+import { FileText, Edit2, Trash2, X } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 import { Movimiento } from '@/types';
 
-export default function MovimientosPage() {
+function MovimientosContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const filterMes = searchParams.get('mes');
+  const filterAnio = searchParams.get('anio');
+
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,10 +27,18 @@ export default function MovimientosPage() {
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const fetchMovimientos = async () => {
     try {
-      const res = await fetch('/api/movimientos');
+      setLoading(true);
+      let url = '/api/movimientos';
+      if (filterMes && filterAnio) {
+        url += `?mes=${filterMes}&anio=${filterAnio}`;
+      }
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setMovimientos(data);
@@ -56,7 +70,7 @@ export default function MovimientosPage() {
   useEffect(() => {
     fetchMovimientos();
     fetchCategorias();
-  }, []);
+  }, [filterMes, filterAnio]);
 
   // Update default category when 'tipo' changes
   useEffect(() => {
@@ -111,13 +125,70 @@ export default function MovimientosPage() {
     const res = await fetch(`/api/movimientos/${deleteId}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Error al eliminar el movimiento');
     fetchMovimientos();
+    
+    // Si estaba seleccionado, lo quitamos
+    if (selectedIds.has(deleteId)) {
+      const newSet = new Set(selectedIds);
+      newSet.delete(deleteId);
+      setSelectedIds(newSet);
+    }
   };
+
+  const toggleSelection = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === movimientos.length && movimientos.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(movimientos.map(m => m.id)));
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    try {
+      setBulkDeleting(true);
+      const res = await fetch('/api/movimientos/bulk', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      });
+      if (res.ok) {
+        setSelectedIds(new Set());
+        fetchMovimientos();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setBulkDeleting(false);
+      setShowBulkConfirm(false);
+    }
+  };
+
+  const getMonthName = (month: string) => {
+    const date = new Date(2000, parseInt(month) - 1, 1);
+    return date.toLocaleString('es-ES', { month: 'long' });
+  };
+
+  const isFiltered = filterMes && filterAnio;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader 
         title="Movimientos" 
-        subtitle="Gestiona tus ingresos y egresos"
+        subtitle={isFiltered ? `Filtrando: ${getMonthName(filterMes)} ${filterAnio}` : "Gestiona tus ingresos y egresos"}
+        action={isFiltered ? (
+          <button 
+            onClick={() => router.push('/movimientos')} 
+            className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition-colors"
+          >
+            <X className="w-4 h-4" /> Limpiar filtro
+          </button>
+        ) : undefined}
       />
 
       {/* Formulario de Carga */}
@@ -211,10 +282,42 @@ export default function MovimientosPage() {
       </form>
 
       {/* Tabla de Movimientos */}
-      <div className="glass-panel w-full overflow-x-auto">
-        <table className="w-full border-collapse text-left">
+      <div className="glass-panel w-full overflow-hidden flex flex-col">
+        
+        {/* Barra de Acciones Masivas */}
+        {selectedIds.size > 0 && (
+          <div className="bg-blue-50/90 backdrop-blur-md border-b border-blue-100 p-4 flex justify-between items-center animate-in slide-in-from-top-2">
+            <span className="text-[#0F3160] font-bold text-sm">
+              {selectedIds.size} movimiento{selectedIds.size !== 1 ? 's' : ''} seleccionado{selectedIds.size !== 1 ? 's' : ''}
+            </span>
+            <div className="flex gap-3 items-center">
+              <button onClick={() => setSelectedIds(new Set())} className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
+                Cancelar
+              </button>
+              <button 
+                onClick={() => setShowBulkConfirm(true)}
+                disabled={bulkDeleting}
+                className="bg-danger hover:bg-red-600 text-white text-sm px-4 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" /> {bulkDeleting ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="overflow-x-auto w-full">
+          <table className="w-full border-collapse text-left">
           <thead>
             <tr>
+              <th className="p-4 border-b border-slate-200 w-12">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 rounded border-slate-300 text-[#0F3160] focus:ring-[#0F3160] cursor-pointer"
+                  checked={movimientos.length > 0 && selectedIds.size === movimientos.length}
+                  onChange={toggleAll}
+                  disabled={movimientos.length === 0 || loading}
+                />
+              </th>
               <th className="p-4 border-b border-slate-200 text-slate-500 font-medium">Fecha</th>
               <th className="p-4 border-b border-slate-200 text-slate-500 font-medium">Tipo</th>
               <th className="p-4 border-b border-slate-200 text-slate-500 font-medium">Categoría</th>
@@ -225,10 +328,10 @@ export default function MovimientosPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="text-center p-4">Cargando...</td></tr>
+              <tr><td colSpan={7} className="text-center p-4">Cargando...</td></tr>
             ) : movimientos.length === 0 ? (
               <tr>
-                <td colSpan={6} className="p-0">
+                <td colSpan={7} className="p-0">
                   <BlankState 
                     variant="not-found"
                     Icon={FileText}
@@ -239,7 +342,15 @@ export default function MovimientosPage() {
               </tr>
             ) : (
               movimientos.map((m) => (
-                <tr key={m.id}>
+                <tr key={m.id} className={`${selectedIds.has(m.id) ? 'bg-blue-50/40' : 'hover:bg-slate-50'} transition-colors`}>
+                  <td className="p-4 border-b border-slate-200">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded border-slate-300 text-[#0F3160] focus:ring-[#0F3160] cursor-pointer"
+                      checked={selectedIds.has(m.id)}
+                      onChange={() => toggleSelection(m.id)}
+                    />
+                  </td>
                   <td className="p-4 border-b border-slate-200 text-[#0F3160] font-medium">{new Date(m.fecha).toLocaleDateString()}</td>
                   <td className={`p-4 border-b border-slate-200 font-semibold ${m.tipo === 'INGRESO' ? 'text-primary' : 'text-danger'}`}>
                     {m.tipo}
@@ -264,6 +375,7 @@ export default function MovimientosPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <ConfirmDeleteDialog
@@ -273,6 +385,22 @@ export default function MovimientosPage() {
         title="¿Eliminar movimiento?"
         description="¿Estás seguro de que deseas eliminar este movimiento? Esta acción no se puede deshacer."
       />
+
+      <ConfirmDeleteDialog
+        isOpen={showBulkConfirm}
+        onClose={() => setShowBulkConfirm(false)}
+        onConfirm={confirmBulkDelete}
+        title="¿Eliminar movimientos seleccionados?"
+        description={`Estás a punto de eliminar ${selectedIds.size} movimiento${selectedIds.size !== 1 ? 's' : ''}. Esta acción no se puede deshacer.`}
+      />
     </div>
+  );
+}
+
+export default function MovimientosPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500">Cargando...</div>}>
+      <MovimientosContent />
+    </Suspense>
   );
 }

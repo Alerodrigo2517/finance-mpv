@@ -20,7 +20,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     const updateData: any = { tipo, categoria, descripcion };
     if (monto !== undefined) updateData.monto = parseFloat(monto);
-    if (fecha) updateData.fecha = new Date(fecha).toISOString();
+    if (fecha) {
+      updateData.fecha = fecha.includes('T') ? new Date(fecha).toISOString() : new Date(`${fecha}T12:00:00Z`).toISOString();
+    }
 
     const { data: actualizado, error } = await supabase
       .from('movimientos')
