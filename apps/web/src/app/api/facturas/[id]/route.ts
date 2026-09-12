@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
+import { createClient } from '@/utils/supabase/server';
 import { actualizarEstadoFactura } from '@/lib/services/facturas.service';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
     const data = await request.json();
     const resolvedParams = await params;
@@ -19,7 +19,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const facturaActualizada = await actualizarEstadoFactura(
       facturaId,
       data.estado,
-      session.user.id
+      user.id
     );
 
     return NextResponse.json(facturaActualizada);

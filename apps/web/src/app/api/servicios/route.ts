@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
+import { createClient } from '@/utils/supabase/server';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    const servicios = await prisma.servicio.findMany({ 
-      where: { usuarioId: session.user.id },
-      include: { facturas: true } 
-    });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    
+    const { data: servicios, error } = await supabase
+      .from('servicios')
+      .select('*, facturas:factura_servicios(*)')
+      .order('id', { ascending: false });
+
+    if (error) throw error;
     return NextResponse.json(servicios);
   } catch (error) {
     console.error('Error in GET /api/servicios:', error);
@@ -20,37 +22,53 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
     const data = await request.json();
 
-    const nuevoServicio = await prisma.servicio.create({
-      data: {
+    const { data: nuevoServicio, error: servicioError } = await supabase
+      .from('servicios')
+      .insert({
         tipo: data.tipo || 'GENERAL',
-        nombreProveedor: data.nombre,
-        nroCuenta: data.nroCuenta || null,
-        nroMedidor: data.nroMedidor || null,
-        usuarioId: session.user.id,
-        ...(data.monto && data.vencimiento ? {
-          facturas: {
-            create: {
-              monto: parseFloat(data.monto),
-              fechaVencimiento: new Date(data.vencimiento),
-              periodoDesde: new Date(),
-              periodoHasta: new Date(),
-              estado: 'PENDIENTE'
-            }
-          }
-        } : {})
-      },
-      include: { facturas: true }
-    });
+        nombre_proveedor: data.nombre,
+        nro_cuenta: data.nroCuenta || null,
+        nro_medidor: data.nroMedidor || null,
+        usuario_id: user.id,
+      })
+      .select()
+      .single();
 
-    return NextResponse.json(nuevoServicio, { status: 201 });
+    if (servicioError) throw servicioError;
+
+    if (data.monto && data.vencimiento && nuevoServicio) {
+      const { error: facturaError } = await supabase
+        .from('factura_servicios')
+        .insert({
+          servicio_id: nuevoServicio.id,
+          monto: parseFloat(data.monto),
+          fecha_vencimiento: new Date(data.vencimiento).toISOString(),
+          periodo_desde: new Date().toISOString(),
+          periodo_hasta: new Date().toISOString(),
+          estado: 'PENDIENTE',
+        });
+        
+      if (facturaError) throw facturaError;
+    }
+
+    // Fetch the updated service with its facturas
+    const { data: servicioCompleto, error: fetchError } = await supabase
+      .from('servicios')
+      .select('*, facturas:factura_servicios(*)')
+      .eq('id', nuevoServicio.id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    return NextResponse.json(servicioCompleto, { status: 201 });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Error al crear servicio' }, { status: 500 });
   }
 }
-

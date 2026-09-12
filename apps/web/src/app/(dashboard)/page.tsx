@@ -1,22 +1,26 @@
-import { prisma } from '@/lib/prisma';
-
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
+import { createClient } from '@/utils/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const session = await getServerSession(authOptions);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   let movimientos: any[] = [];
   let ingresos = 0;
   let egresos = 0;
   let saldo = 0;
   
   try {
-    if (session?.user) {
-      movimientos = await prisma.movimiento.findMany({
-        where: { usuarioId: (session.user as any).id },
-      });
+    if (user) {
+      const { data, error } = await supabase
+        .from('movimientos')
+        .select('*')
+        .eq('usuario_id', user.id);
+      
+      if (!error && data) {
+        movimientos = data;
+      }
     }
   } catch (error) {
     console.error('Error conectando a la BD. Mostrando datos mockeados:', error);

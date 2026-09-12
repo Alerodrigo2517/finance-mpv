@@ -1,19 +1,17 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
+import { createClient } from '@/utils/supabase/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
-
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
-    const usuarioId = session.user.id;
+    const usuarioId = user.id;
 
     // 1. Get the file from FormData
     const formData = await request.formData();
@@ -96,21 +94,27 @@ export async function POST(request: Request) {
 
     // 4. Update Database
     // Buscar o crear servicio
-    let servicio = await prisma.servicio.findFirst({
-      where: { 
-        usuarioId, 
-        nombreProveedor: { equals: parsedData.nombreProveedor, mode: 'insensitive' }
-      }
-    });
+    let { data: servicio } = await supabase
+      .from('servicios')
+      .select('id, nombre_proveedor')
+      .eq('usuario_id', usuarioId)
+      .ilike('nombre_proveedor', parsedData.nombreProveedor)
+      .limit(1)
+      .single();
 
     if (!servicio) {
-      servicio = await prisma.servicio.create({
-        data: {
+      const { data: newServicio, error: newServicioError } = await supabase
+        .from('servicios')
+        .insert({
           tipo: parsedData.tipoServicio || 'OTRO',
-          nombreProveedor: parsedData.nombreProveedor || 'Servicio Desconocido',
-          usuarioId
-        }
-      });
+          nombre_proveedor: parsedData.nombreProveedor || 'Servicio Desconocido',
+          usuario_id: usuarioId
+        })
+        .select('id, nombre_proveedor')
+        .single();
+        
+      if (newServicioError) throw newServicioError;
+      servicio = newServicio;
     }
 
     // Guardar archivo físicamente
@@ -124,40 +128,44 @@ export async function POST(request: Request) {
     await writeFile(filePath, buffer);
     const archivoUrl = `/uploads/facturas/${fileName}`;
 
-    const factura = await prisma.facturaServicio.create({
-      data: {
-        servicioId: servicio.id,
-        periodoDesde: parsedData.periodoDesde ? new Date(parsedData.periodoDesde) : new Date(),
-        periodoHasta: parsedData.periodoHasta ? new Date(parsedData.periodoHasta) : new Date(),
-        fechaVencimiento: parsedData.fechaVencimiento ? new Date(parsedData.fechaVencimiento) : new Date(),
-        monto: parsedData.monto || 0,
-        estado: 'PENDIENTE',
-        kwConsumidos: parsedData.kwConsumidos,
-        fechaEmision: parsedData.fechaEmision ? new Date(parsedData.fechaEmision) : null,
-        proximaFechaVencimiento: parsedData.proximaFechaVencimiento ? new Date(parsedData.proximaFechaVencimiento) : null,
-        archivoUrl: archivoUrl
-      }
-    });
+    if (servicio) {
+      const { data: factura, error: facturaError } = await supabase
+        .from('factura_servicios')
+        .insert({
+          servicio_id: servicio.id,
+          periodo_desde: parsedData.periodoDesde ? new Date(parsedData.periodoDesde).toISOString() : new Date().toISOString(),
+          periodo_hasta: parsedData.periodoHasta ? new Date(parsedData.periodoHasta).toISOString() : new Date().toISOString(),
+          fecha_vencimiento: parsedData.fechaVencimiento ? new Date(parsedData.fechaVencimiento).toISOString() : new Date().toISOString(),
+          monto: parsedData.monto || 0,
+          estado: 'PENDIENTE',
+          kw_consumidos: parsedData.kwConsumidos,
+          fecha_emision: parsedData.fechaEmision ? new Date(parsedData.fechaEmision).toISOString() : null,
+          proxima_fecha_vencimiento: parsedData.proximaFechaVencimiento ? new Date(parsedData.proximaFechaVencimiento).toISOString() : null,
+          archivo_url: archivoUrl
+        })
+        .select()
+        .single();
 
-    // 5. Create Alerta (5 días antes del vencimiento)
-    if (parsedData.fechaVencimiento) {
-      const fechaVenc = new Date(parsedData.fechaVencimiento);
-      const fechaAlerta = new Date(fechaVenc);
-      fechaAlerta.setDate(fechaAlerta.getDate() - 5);
-      
-      await prisma.alerta.create({
-        data: {
-          tipoAlerta: 'VENCIMIENTO_FACTURA',
-          descripcion: `Tu factura de ${servicio.nombreProveedor} por $${parsedData.monto} vence el ${fechaVenc.toLocaleDateString()}`,
-          fecha: fechaAlerta,
+      if (facturaError) throw facturaError;
+
+      // 5. Create Alerta (5 días antes del vencimiento)
+      if (parsedData.fechaVencimiento && factura) {
+        const fechaVenc = new Date(parsedData.fechaVencimiento);
+        const fechaAlerta = new Date(fechaVenc);
+        fechaAlerta.setDate(fechaAlerta.getDate() - 5);
+        
+        await supabase.from('alertas').insert({
+          tipo_alerta: 'VENCIMIENTO_FACTURA',
+          descripcion: `Tu factura de ${servicio.nombre_proveedor} por $${parsedData.monto} vence el ${fechaVenc.toLocaleDateString()}`,
+          fecha: fechaAlerta.toISOString(),
           estado: 'NO_LEIDA',
-          referenciaId: factura.id,
-          usuarioId
-        }
-      });
-    }
+          referencia_id: factura.id,
+          usuario_id: usuarioId
+        });
+      }
 
-    return NextResponse.json({ success: true, factura, parsedData });
+      return NextResponse.json({ success: true, factura, parsedData });
+    }
   } catch (error: unknown) {
     console.error('Error procesando factura:', error);
     return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) || 'Error interno' }, { status: 500 });

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { procesarAudioWhatsApp } from '@/lib/whatsapp';
+import { createClient } from '@supabase/supabase-js';
 
 // Verificación del webhook (Requerido por WhatsApp API)
 export async function GET(request: Request) {
@@ -22,6 +22,10 @@ export async function GET(request: Request) {
 // Recepción de mensajes (Audios)
 export async function POST(request: Request) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     const body = await request.json();
     
     // 1. Extraer ID del usuario (número de teléfono) y URL del audio (simplificado)
@@ -33,21 +37,19 @@ export async function POST(request: Request) {
       const audioId = mensaje.audio.id;
       
       // Buscar usuario por teléfono (simplificado)
-      let usuario = await prisma.usuario.findFirst(); // Mock MVP
+      const { data: usuario } = await supabase.from('usuarios').select('id').limit(1).single(); // Mock MVP
       
       if (usuario) {
         // 2. Procesar el audio mediante IA (Mockeado por ahora)
         const resultadoIA = await procesarAudioWhatsApp(audioId);
         
         // 3. Crear el registro "Pendiente" o "Procesado" para que el usuario confirme en la web
-        await prisma.registroWhatsApp.create({
-          data: {
-            textoTranscrito: resultadoIA.texto,
-            montoDetectado: resultadoIA.monto,
-            categoriaDetectada: resultadoIA.categoria,
-            estado: 'PROCESADO',
-            usuarioId: usuario.id,
-          }
+        await supabase.from('registro_whatsapp').insert({
+          texto_transcrito: resultadoIA.texto,
+          monto_detectado: resultadoIA.monto,
+          categoria_detectada: resultadoIA.categoria,
+          estado: 'PROCESADO',
+          usuario_id: usuario.id,
         });
       }
     }

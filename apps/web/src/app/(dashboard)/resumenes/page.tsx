@@ -1,35 +1,34 @@
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
+import { createClient } from '@/utils/supabase/server';
 import PageHeader from '@/components/ui/PageHeader';
 import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ResumenesPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     redirect('/login');
   }
-  const usuarioId = (session.user as any).id;
+  const usuarioId = user.id;
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
   // Fetch movimientos del mes actual
-  const movimientosMes = await prisma.movimiento.findMany({
-    where: {
-      usuarioId,
-      fecha: { gte: startOfMonth, lte: endOfMonth }
-    }
-  });
+  const { data: movimientosMes } = await supabase
+    .from('movimientos')
+    .select('*')
+    .eq('usuario_id', usuarioId)
+    .gte('fecha', startOfMonth.toISOString())
+    .lte('fecha', endOfMonth.toISOString());
 
   let ingresos = 0;
   let egresos = 0;
   const gastosPorCategoria: Record<string, number> = {};
 
-  movimientosMes.forEach(m => {
+  (movimientosMes || []).forEach(m => {
     if (m.tipo === 'INGRESO') {
       ingresos += m.monto;
     } else if (m.tipo === 'EGRESO') {
@@ -46,15 +45,16 @@ export default async function ResumenesPage() {
     .sort((a, b) => b.monto - a.monto);
 
   // Agrupar movimientos pasados dinámicamente
-  const todosLosMovimientos = await prisma.movimiento.findMany({
-    where: { usuarioId },
-    orderBy: { fecha: 'desc' }
-  });
+  const { data: todosLosMovimientos } = await supabase
+    .from('movimientos')
+    .select('*')
+    .eq('usuario_id', usuarioId)
+    .order('fecha', { ascending: false });
 
   const currentMonthKey = `${now.getFullYear()}-${now.getMonth() + 1}`;
   const agrupado: Record<string, { id: string, mes: number, anio: number, totalIngresos: number, totalEgresos: number, saldo: number, estado: string }> = {};
 
-  todosLosMovimientos.forEach(m => {
+  (todosLosMovimientos || []).forEach(m => {
     const date = new Date(m.fecha);
     const anio = date.getFullYear();
     const mes = date.getMonth() + 1;

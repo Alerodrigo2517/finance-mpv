@@ -1,5 +1,4 @@
-import { prisma } from '@/lib/prisma';
-import { FacturaServicio } from '@prisma/client';
+import { createClient } from '@/utils/supabase/server';
 
 /**
  * Obtiene todas las facturas de un usuario, opcionalmente filtradas por estado.
@@ -7,26 +6,27 @@ import { FacturaServicio } from '@prisma/client';
 export async function obtenerFacturasPorUsuario(
   usuarioId: string,
   estado?: string
-): Promise<FacturaServicio[]> {
-  const whereClause: import('@prisma/client').Prisma.FacturaServicioWhereInput = {
-    servicio: {
-      usuarioId,
-    },
-  };
+): Promise<any[]> {
+  const supabase = await createClient();
+
+  let query = supabase
+    .from('factura_servicios')
+    .select('*, servicio:servicios!inner(*)')
+    .eq('servicios.usuario_id', usuarioId)
+    .order('fecha_vencimiento', { ascending: true });
 
   if (estado) {
-    whereClause.estado = estado;
+    query = query.eq('estado', estado);
   }
 
-  return prisma.facturaServicio.findMany({
-    where: whereClause,
-    include: {
-      servicio: true,
-    },
-    orderBy: {
-      fechaVencimiento: 'asc',
-    },
-  });
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Error in obtenerFacturasPorUsuario', error);
+    return [];
+  }
+  
+  return data || [];
 }
 
 /**
@@ -35,15 +35,18 @@ export async function obtenerFacturasPorUsuario(
 export async function calcularTotalAdeudadoFacturas(
   usuarioId: string
 ): Promise<number> {
-  const result = await prisma.facturaServicio.aggregate({
-    where: {
-      servicio: { usuarioId },
-      estado: { in: ['PENDIENTE', 'VENCIDA'] },
-    },
-    _sum: {
-      monto: true,
-    },
-  });
+  const supabase = await createClient();
 
-  return result._sum.monto || 0;
+  const { data, error } = await supabase
+    .from('factura_servicios')
+    .select('monto, servicio:servicios!inner(usuario_id)')
+    .eq('servicios.usuario_id', usuarioId)
+    .in('estado', ['PENDIENTE', 'VENCIDA']);
+
+  if (error) {
+    console.error('Error in calcularTotalAdeudadoFacturas', error);
+    return 0;
+  }
+
+  return (data || []).reduce((acc, factura) => acc + (factura.monto || 0), 0);
 }

@@ -1,33 +1,34 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
+import { createClient } from '@/utils/supabase/server';
 
 export async function DELETE(
   request: Request,
   { params }: any
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
-    const usuarioId = session.user.id;
+    const usuarioId = user.id;
 
     const categoriaId = params.id;
 
-    // Verificar que la categoría pertenece al usuario
-    const categoria = await prisma.categoriaUsuario.findUnique({
-      where: { id: categoriaId },
-    });
+    const { data: categoria } = await supabase
+      .from('categoria_usuarios')
+      .select('usuario_id')
+      .eq('id', categoriaId)
+      .single();
 
-    if (!categoria || categoria.usuarioId !== usuarioId) {
+    if (!categoria || categoria.usuario_id !== usuarioId) {
       return NextResponse.json({ error: 'No autorizado o no encontrada' }, { status: 403 });
     }
 
-    await prisma.categoriaUsuario.delete({
-      where: { id: categoriaId },
-    });
+    await supabase
+      .from('categoria_usuarios')
+      .delete()
+      .eq('id', categoriaId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -41,11 +42,12 @@ export async function PUT(
   { params }: any
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
-    const usuarioId = session.user.id;
+    const usuarioId = user.id;
     const categoriaId = params.id;
 
     const body = await request.json();
@@ -55,18 +57,24 @@ export async function PUT(
       return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 });
     }
 
-    const categoria = await prisma.categoriaUsuario.findUnique({
-      where: { id: categoriaId },
-    });
+    const { data: categoria } = await supabase
+      .from('categoria_usuarios')
+      .select('usuario_id')
+      .eq('id', categoriaId)
+      .single();
 
-    if (!categoria || categoria.usuarioId !== usuarioId) {
+    if (!categoria || categoria.usuario_id !== usuarioId) {
       return NextResponse.json({ error: 'No autorizado o no encontrada' }, { status: 403 });
     }
 
-    const categoriaActualizada = await prisma.categoriaUsuario.update({
-      where: { id: categoriaId },
-      data: { nombre },
-    });
+    const { data: categoriaActualizada, error } = await supabase
+      .from('categoria_usuarios')
+      .update({ nombre })
+      .eq('id', categoriaId)
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return NextResponse.json(categoriaActualizada);
   } catch (error) {

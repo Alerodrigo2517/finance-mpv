@@ -1,38 +1,47 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
+import { createClient } from '@/utils/supabase/server';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
-    const usuarioId = session.user.id;
+    const usuarioId = user.id;
 
-    let categorias = await prisma.categoriaUsuario.findMany({
-      where: { usuarioId },
-      orderBy: { nombre: 'asc' },
-    });
+    let { data: categorias, error: fetchError } = await supabase
+      .from('categoria_usuarios')
+      .select('*')
+      .eq('usuario_id', usuarioId)
+      .order('nombre', { ascending: true });
+
+    if (fetchError) throw fetchError;
 
     // Seed defaults if user has no categories
-    if (categorias.length === 0) {
+    if (!categorias || categorias.length === 0) {
       const defaultCategories = [
-        { nombre: 'Supermercado', tipo: 'EGRESO', usuarioId },
-        { nombre: 'Servicios', tipo: 'EGRESO', usuarioId },
-        { nombre: 'Transporte', tipo: 'EGRESO', usuarioId },
-        { nombre: 'Entretenimiento', tipo: 'EGRESO', usuarioId },
-        { nombre: 'Sueldo', tipo: 'INGRESO', usuarioId },
-        { nombre: 'Transferencias', tipo: 'INGRESO', usuarioId },
+        { nombre: 'Supermercado', tipo: 'EGRESO', usuario_id: usuarioId },
+        { nombre: 'Servicios', tipo: 'EGRESO', usuario_id: usuarioId },
+        { nombre: 'Transporte', tipo: 'EGRESO', usuario_id: usuarioId },
+        { nombre: 'Entretenimiento', tipo: 'EGRESO', usuario_id: usuarioId },
+        { nombre: 'Sueldo', tipo: 'INGRESO', usuario_id: usuarioId },
+        { nombre: 'Transferencias', tipo: 'INGRESO', usuario_id: usuarioId },
       ];
       
-      await prisma.categoriaUsuario.createMany({ data: defaultCategories });
+      const { error: insertError } = await supabase
+        .from('categoria_usuarios')
+        .insert(defaultCategories);
+
+      if (insertError) throw insertError;
       
-      categorias = await prisma.categoriaUsuario.findMany({
-        where: { usuarioId },
-        orderBy: { nombre: 'asc' },
-      });
+      const { data: nuevasCategorias } = await supabase
+        .from('categoria_usuarios')
+        .select('*')
+        .eq('usuario_id', usuarioId)
+        .order('nombre', { ascending: true });
+
+      categorias = nuevasCategorias || [];
     }
 
     return NextResponse.json(categorias);
@@ -44,11 +53,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
-    const usuarioId = session.user.id;
+    const usuarioId = user.id;
 
     const body = await request.json();
     const { nombre, tipo } = body;
@@ -57,13 +67,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Faltan campos' }, { status: 400 });
     }
 
-    const nuevaCategoria = await prisma.categoriaUsuario.create({
-      data: {
+    const { data: nuevaCategoria, error } = await supabase
+      .from('categoria_usuarios')
+      .insert({
         nombre,
         tipo,
-        usuarioId,
-      },
-    });
+        usuario_id: usuarioId,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return NextResponse.json(nuevaCategoria);
   } catch (error) {

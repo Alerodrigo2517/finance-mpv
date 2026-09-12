@@ -1,18 +1,21 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
+import { createClient } from '@/utils/supabase/server';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
-    const movimientos = await prisma.movimiento.findMany({
-      where: { usuarioId: session.user.id },
-      orderBy: { fecha: 'desc' },
-      take: 50,
-    });
+    const { data: movimientos, error } = await supabase
+      .from('movimientos')
+      .select('*')
+      .order('fecha', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+    
     return NextResponse.json(movimientos);
   } catch (error) {
     return NextResponse.json({ error: 'Error al obtener movimientos' }, { status: 500 });
@@ -21,21 +24,27 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
     const data = await request.json();
     
-    const nuevoMovimiento = await prisma.movimiento.create({
-      data: {
+    const { data: nuevoMovimiento, error } = await supabase
+      .from('movimientos')
+      .insert({
         tipo: data.tipo,
         monto: parseFloat(data.monto),
         categoria: data.categoria,
         descripcion: data.descripcion,
         origen: data.origen || 'MANUAL',
-        usuarioId: session.user.id,
-      },
-    });
+        usuario_id: user.id, // Supabase schema uses usuario_id instead of usuarioId
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return NextResponse.json(nuevoMovimiento, { status: 201 });
   } catch (error) {

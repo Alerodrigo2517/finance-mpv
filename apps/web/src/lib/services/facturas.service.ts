@@ -1,5 +1,4 @@
-import { prisma } from '@/lib/prisma';
-import { FacturaServicio } from '@prisma/client';
+import { createClient } from '@/utils/supabase/server';
 
 export type CrearFacturaData = {
   servicioId: string;
@@ -16,22 +15,34 @@ export type CrearFacturaData = {
 export async function crearFactura(
   data: CrearFacturaData,
   usuarioId: string
-): Promise<FacturaServicio> {
-  // Opcional: Validar que el servicio pertenezca al usuario
-  const servicio = await prisma.servicio.findUnique({
-    where: { id: data.servicioId },
-  });
+): Promise<any> {
+  const supabase = await createClient();
 
-  if (!servicio || servicio.usuarioId !== usuarioId) {
+  const { data: servicio } = await supabase
+    .from('servicios')
+    .select('usuario_id')
+    .eq('id', data.servicioId)
+    .single();
+
+  if (!servicio || servicio.usuario_id !== usuarioId) {
     throw new Error('Servicio no encontrado o no pertenece al usuario');
   }
 
-  return prisma.facturaServicio.create({
-    data: {
-      ...data,
+  const { data: nuevaFactura, error } = await supabase
+    .from('factura_servicios')
+    .insert({
+      servicio_id: data.servicioId,
+      periodo_desde: data.periodoDesde.toISOString(),
+      periodo_hasta: data.periodoHasta.toISOString(),
+      fecha_vencimiento: data.fechaVencimiento.toISOString(),
+      monto: data.monto,
       estado: 'PENDIENTE',
-    },
-  });
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return nuevaFactura;
 }
 
 /**
@@ -41,23 +52,33 @@ export async function marcarFacturaComoPagada(
   facturaId: string,
   fechaPago: Date,
   usuarioId: string
-): Promise<FacturaServicio> {
-  const factura = await prisma.facturaServicio.findUnique({
-    where: { id: facturaId },
-    include: { servicio: true },
-  });
+): Promise<any> {
+  const supabase = await createClient();
 
-  if (!factura || factura.servicio.usuarioId !== usuarioId) {
+  // RLS will ensure user owns the factura if policies are set correctly, 
+  // but we can also verify explicitly just in case.
+  const { data: factura } = await supabase
+    .from('factura_servicios')
+    .select('*, servicios(usuario_id)')
+    .eq('id', facturaId)
+    .single();
+
+  if (!factura || factura.servicios?.usuario_id !== usuarioId) {
     throw new Error('Factura no encontrada o no pertenece al usuario');
   }
 
-  return prisma.facturaServicio.update({
-    where: { id: facturaId },
-    data: {
+  const { data: facturaActualizada, error } = await supabase
+    .from('factura_servicios')
+    .update({
       estado: 'PAGADA',
-      fechaPago,
-    },
-  });
+      fecha_pago: fechaPago.toISOString(),
+    })
+    .eq('id', facturaId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return facturaActualizada;
 }
 
 /**
@@ -67,26 +88,34 @@ export async function actualizarEstadoFactura(
   facturaId: string,
   estado: string,
   usuarioId: string
-): Promise<FacturaServicio> {
-  const factura = await prisma.facturaServicio.findUnique({
-    where: { id: facturaId },
-    include: { servicio: true },
-  });
+): Promise<any> {
+  const supabase = await createClient();
 
-  if (!factura || factura.servicio.usuarioId !== usuarioId) {
+  const { data: factura } = await supabase
+    .from('factura_servicios')
+    .select('*, servicios(usuario_id)')
+    .eq('id', facturaId)
+    .single();
+
+  if (!factura || factura.servicios?.usuario_id !== usuarioId) {
     throw new Error('Factura no encontrada o no pertenece al usuario');
   }
 
-  const dataToUpdate: import('@prisma/client').Prisma.FacturaServicioUpdateInput = { estado };
+  const dataToUpdate: any = { estado };
   if (estado === 'PAGADA') {
-    dataToUpdate.fechaPago = new Date();
+    dataToUpdate.fecha_pago = new Date().toISOString();
   } else if (estado === 'PENDIENTE') {
-    dataToUpdate.fechaPago = null;
+    dataToUpdate.fecha_pago = null;
   }
 
-  return prisma.facturaServicio.update({
-    where: { id: facturaId },
-    data: dataToUpdate,
-  });
+  const { data: facturaActualizada, error } = await supabase
+    .from('factura_servicios')
+    .update(dataToUpdate)
+    .eq('id', facturaId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return facturaActualizada;
 }
 
