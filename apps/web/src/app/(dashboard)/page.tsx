@@ -8,8 +8,8 @@ export default async function Home() {
   const { data: { user } } = await supabase.auth.getUser();
 
   let movimientos: Movimiento[] = [];
-  let ingresos = 0;
-  let egresos = 0;
+  let ingresosMes = 0;
+  let egresosMes = 0;
   let saldo = 0;
   
   try {
@@ -27,12 +27,22 @@ export default async function Home() {
     console.error('Error conectando a la BD. Mostrando datos mockeados:', error);
   }
 
-  movimientos.forEach(m => {
-    if (m.tipo === 'INGRESO') ingresos += m.monto;
-    else if (m.tipo === 'EGRESO') egresos += m.monto;
-  });
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
 
-  saldo = ingresos - egresos;
+  movimientos.forEach(m => {
+    // Saldo histórico global
+    if (m.tipo === 'INGRESO') saldo += m.monto;
+    else if (m.tipo === 'EGRESO') saldo -= m.monto;
+
+    // Ingresos y egresos específicamente de este mes
+    const d = new Date(m.fecha);
+    if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+      if (m.tipo === 'INGRESO') ingresosMes += m.monto;
+      else if (m.tipo === 'EGRESO') egresosMes += m.monto;
+    }
+  });
 
   return (
     <div className="flex flex-col gap-6 md:gap-8">
@@ -57,12 +67,12 @@ export default async function Home() {
           <div className="flex gap-6 mt-4">
             <div className="flex flex-col">
               <span className="text-blue-200/70 text-sm">Ingresos</span>
-              <span className="text-white font-semibold text-xl">+{ingresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</span>
+              <span className="text-white font-semibold text-xl">+{ingresosMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</span>
             </div>
             <div className="w-px h-10 bg-white/20 self-center"></div>
             <div className="flex flex-col">
               <span className="text-blue-200/70 text-xs md:text-sm">Egresos</span>
-              <span className="text-white font-semibold text-lg md:text-xl">-{egresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</span>
+              <span className="text-white font-semibold text-lg md:text-xl">-{egresosMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</span>
             </div>
           </div>
         </div>
