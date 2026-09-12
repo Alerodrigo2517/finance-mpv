@@ -115,7 +115,9 @@ function MovimientosContent() {
     setMonto(m.monto.toString());
     setCategoria(m.categoria);
     setDescripcion(m.descripcion || '');
-    setFecha(m.fecha.split('T')[0]);
+    // Ensure we handle both string and Date types correctly for TypeScript
+    const dateStr = typeof m.fecha === 'string' ? m.fecha : (m.fecha as Date).toISOString();
+    setFecha(dateStr.split('T')[0]);
     // Hacer scroll arriba para ver el form
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
