@@ -106,7 +106,7 @@ export default async function Home() {
             </div>
           ) : (
              <div className="space-y-3 mt-4">
-               {movimientos.slice(0, 5).map((m) => (
+               {movimientos.slice(0, 3).map((m) => (
                  <div key={m.id} className="flex justify-between items-center bg-slate-50 hover:bg-slate-100 transition-colors p-4 rounded-xl border border-slate-100">
                    <div className="flex flex-col">
                      <span className="font-bold text-slate-800 text-sm">{m.categoria}</span>

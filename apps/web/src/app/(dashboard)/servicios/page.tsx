@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { ChevronLeft, Plus, Receipt, Loader2, UploadCloud, FileText, Download, ExternalLink, Trash2, Camera } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Receipt, Loader2, UploadCloud, FileText, Download, ExternalLink, Trash2, Camera, X } from 'lucide-react';
 import Link from 'next/link';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import FacturasList from '@/components/FacturasList';
 import { ConfirmDeleteDialog } from '@/components/ui/ConfirmDeleteDialog';
+import BlankState from '@/components/ui/BlankState';
 
 import { Servicio, Factura } from '@/types';
 
@@ -262,13 +263,17 @@ export default function ServiciosPage() {
           )}
           <h1 className="text-xl font-bold text-[#0F3160] uppercase tracking-wide">Gestion de Servicios</h1>
         </div>
-        <div className="flex gap-2">
-          <button className="text-xs font-bold uppercase border border-slate-300 bg-white text-slate-700 px-3 py-1.5 rounded-lg shadow-sm hover:bg-slate-50">
-            Importar
-          </button>
-          <button className="text-xs font-bold uppercase border border-slate-300 bg-white text-slate-700 px-3 py-1.5 rounded-lg shadow-sm hover:bg-slate-50">
-            Exportar
-          </button>
+        <div className="flex gap-2 items-center">
+          {!selectedServicioId && (
+            <button 
+              onClick={() => setShowServicioForm(true)}
+              className="flex items-center gap-1.5 bg-[#0F3160] hover:bg-[#0a244a] text-white text-xs font-bold uppercase px-4 py-2 rounded-lg shadow-sm transition-colors"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span className="hidden sm:inline">Nuevo Servicio</span>
+              <span className="sm:hidden">Nuevo</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -284,73 +289,80 @@ export default function ServiciosPage() {
             <div className="flex flex-col gap-6 w-full animate-in fade-in zoom-in-95 duration-200">
             
             {/* Top Summaries Left */}
-            <div className="flex justify-center gap-3 sm:gap-6">
-              <div className="bg-white border-2 border-slate-200 rounded-2xl px-3 sm:px-6 py-4 flex flex-col items-center justify-center flex-1 sm:flex-none sm:min-w-[140px] shadow-sm text-center">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Gasto Mes</span>
-                <span className="text-lg sm:text-xl font-black text-slate-800">{gastoMesTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              <div className="glass-panel p-5 md:p-6 flex flex-col gap-1 md:gap-2 relative overflow-hidden group">
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
+                <span className="text-slate-500 font-medium text-sm">Gasto del mes</span>
+                <span className="text-3xl md:text-4xl font-bold text-slate-800">
+                  ${gastoMesTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
               </div>
-              <div className="bg-white border-2 border-slate-200 rounded-2xl px-3 sm:px-6 py-4 flex flex-col items-center justify-center flex-1 sm:flex-none sm:min-w-[140px] shadow-sm text-center">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Pendiente</span>
-                <span className="text-lg sm:text-xl font-black text-slate-800">{pendientePagoTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+              <div className="glass-panel p-5 md:p-6 flex flex-col gap-1 md:gap-2 relative overflow-hidden group">
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-danger/10 rounded-full blur-2xl group-hover:bg-danger/20 transition-all"></div>
+                <span className="text-slate-500 font-medium text-sm">Pendiente de pago</span>
+                <span className="text-3xl md:text-4xl font-bold text-danger">
+                  ${pendientePagoTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
               </div>
             </div>
 
             {/* List of Services */}
-            <div className="flex flex-col gap-4 mt-2">
-              {servicios.map(s => {
-                const fs = s.facturas ? [...s.facturas].sort((a,b)=> new Date(b.fechaVencimiento || '').getTime() - new Date(a.fechaVencimiento || '').getTime()) : [];
-                const ultimaFactura = fs[0];
-                const isSelected = selectedServicioId === s.id;
+            <div className="flex flex-col gap-4 mt-2 max-h-[340px] overflow-y-auto pr-2 pb-2">
+              {servicios.length === 0 ? (
+                <div className="bg-white rounded-3xl p-2 border border-slate-100 shadow-sm">
+                  <BlankState 
+                    variant="not-found" 
+                    Icon={Receipt} 
+                    title="Sin servicios" 
+                    description="Comienza agregando los servicios que pagas mensualmente (luz, gas, internet, etc)."
+                    action={
+                      <button 
+                        onClick={() => setShowServicioForm(true)}
+                        className="w-full sm:w-auto bg-[#0F3160] hover:bg-[#0a244a] text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 flex justify-center items-center gap-2 mt-2 shadow-md hover:scale-105"
+                      >
+                        <Plus className="w-5 h-5 stroke-[3]" /> 
+                        <span>Agregar Nuevo Servicio</span>
+                      </button>
+                    }
+                  />
+                </div>
+              ) : (
+                <>
+                  {servicios.map(s => {
+                    const fs = s.facturas ? [...s.facturas].sort((a,b)=> new Date(b.fechaVencimiento || '').getTime() - new Date(a.fechaVencimiento || '').getTime()) : [];
+                    const ultimaFactura = fs[0];
+                    const isSelected = selectedServicioId === s.id;
 
-                return (
-                  <div 
-                    key={s.id} 
-                    onClick={() => setSelectedServicioId(s.id)}
-                    className={`bg-white border-2 rounded-2xl p-5 cursor-pointer transition-all hover:shadow-md ${isSelected ? 'border-[#0F3160] ring-4 ring-blue-50' : 'border-slate-200 hover:border-slate-300'}`}
-                  >
-                    <div className="flex justify-end mb-2">
-                      <span className="font-black text-slate-800 text-lg">
-                        {ultimaFactura ? Number(ultimaFactura.monto).toLocaleString('es-AR', { minimumFractionDigits: 2 }) : '0,00'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-end">
-                      <span className="font-bold text-slate-800 text-xl tracking-wide">{s.nombreProveedor}</span>
-                      <div className="flex gap-2">
-                        {ultimaFactura && ultimaFactura.estado === 'PENDIENTE' ? (
-                          <div className="px-3 py-1 bg-red-50 text-red-600 border border-red-200 rounded-lg text-xs font-bold uppercase">Pendiente</div>
-                        ) : (
-                          <div className="px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-xs font-bold uppercase">Pagado</div>
-                        )}
-                        <button onClick={(e) => handleDeleteServicio(e, s.id)} className="px-3 py-1 bg-white text-red-500 border border-red-500 rounded-lg text-xs font-bold uppercase hover:bg-red-50 transition-colors">
-                          Eliminar
-                        </button>
+                    return (
+                      <div 
+                        key={s.id} 
+                        onClick={() => setSelectedServicioId(s.id)}
+                        className={`group bg-white border-2 rounded-2xl p-4 flex items-center justify-between cursor-pointer transition-all hover:shadow-md ${isSelected ? 'border-[#0F3160] ring-4 ring-blue-50' : 'border-slate-200 hover:border-slate-300'}`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`p-3 rounded-xl flex items-center justify-center transition-colors ${isSelected ? 'bg-[#0F3160] text-white' : 'bg-slate-100 text-[#0F3160] group-hover:bg-blue-50'}`}>
+                            <Receipt className="w-6 h-6" />
+                          </div>
+                          <span className="font-bold text-slate-800 text-lg tracking-wide capitalize">{(s.nombreProveedor || (s as any).nombre_proveedor || '').toLowerCase()}</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                          <button 
+                            onClick={(e) => handleDeleteServicio(e, s.id)} 
+                            className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" 
+                            title="Eliminar servicio"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                          <div className={`transition-colors ${isSelected ? 'text-[#0F3160]' : 'text-slate-300'}`}>
+                            <ChevronRight className="w-6 h-6" />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
 
-              <button 
-                onClick={() => setShowServicioForm(!showServicioForm)}
-                className="w-full bg-slate-100 hover:bg-slate-200 border-2 border-dashed border-slate-300 text-slate-600 font-bold py-4 rounded-2xl transition-colors flex justify-center items-center gap-2 mt-2"
-              >
-                <Plus className="w-5 h-5" /> Agregar Nuevo Servicio
-              </button>
-
-              {showServicioForm && (
-                <form onSubmit={handleServicioSubmit} className="flex flex-col gap-3 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 animate-in fade-in zoom-in duration-200">
-                  <h4 className="font-bold text-[#0F3160] mb-2 text-center">Nuevo Servicio y Factura Inicial</h4>
-                  <input type="text" placeholder="Nombre de servicio (Ej. EDEA)" value={sNombre} onChange={(e) => setSNombre(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400" />
-                  <div className="grid grid-cols-2 gap-3">
-                    <input type="number" step="0.01" placeholder="Monto ($)" value={sMonto} onChange={(e) => setSMonto(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400" />
-                    <input type="date" value={sVencimiento} onChange={(e) => setSVencimiento(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input type="text" placeholder="Cuenta (Opcional)" value={sCuenta} onChange={(e) => setSCuenta(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400" />
-                    <input type="text" placeholder="Medidor (Opcional)" value={sMedidor} onChange={(e) => setSMedidor(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400" />
-                  </div>
-                  <button type="submit" className="w-full bg-[#0F3160] text-white font-bold py-3 rounded-xl mt-2 shadow-md">Guardar</button>
-                </form>
+                </>
               )}
             </div>
           </div>
@@ -358,14 +370,20 @@ export default function ServiciosPage() {
           /* VISTA DETALLE (Un solo servicio) */
           <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-right-8 duration-300">
                 {/* Top Summaries Right */}
-                <div className="flex justify-center gap-3 sm:gap-6">
-                  <div className="bg-white border-2 border-slate-200 rounded-2xl px-3 sm:px-6 py-4 flex flex-col items-center justify-center flex-1 sm:flex-none sm:min-w-[160px] shadow-sm text-center">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 text-center leading-tight">Gasto <br className="sm:hidden" />del año</span>
-                    <span className="text-lg sm:text-xl font-black text-slate-800">{gastoAnoServicio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                  <div className="glass-panel p-5 md:p-6 flex flex-col gap-1 md:gap-2 relative overflow-hidden group">
+                    <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
+                    <span className="text-slate-500 font-medium text-sm">Gasto del año</span>
+                    <span className="text-3xl md:text-4xl font-bold text-slate-800">
+                      ${gastoAnoServicio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    </span>
                   </div>
-                  <div className="bg-white border-2 border-slate-200 rounded-2xl px-3 sm:px-6 py-4 flex flex-col items-center justify-center flex-1 sm:flex-none sm:min-w-[140px] shadow-sm text-center">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Pendiente</span>
-                    <span className="text-lg sm:text-xl font-black text-slate-800">{pendientePagoServicio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                  <div className="glass-panel p-5 md:p-6 flex flex-col gap-1 md:gap-2 relative overflow-hidden group">
+                    <div className="absolute -right-4 -top-4 w-24 h-24 bg-danger/10 rounded-full blur-2xl group-hover:bg-danger/20 transition-all"></div>
+                    <span className="text-slate-500 font-medium text-sm">Pendiente de pago</span>
+                    <span className="text-3xl md:text-4xl font-bold text-danger">
+                      ${pendientePagoServicio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    </span>
                   </div>
                 </div>
 
@@ -508,6 +526,31 @@ export default function ServiciosPage() {
           ? "¿Estás seguro de que deseas eliminar este servicio y TODAS sus facturas? Esta acción no se puede deshacer."
           : "¿Estás seguro de que deseas eliminar esta factura? Esta acción no se puede deshacer."}
       />
+
+      {/* Modal Alta de Servicio */}
+      {showServicioForm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <form onSubmit={handleServicioSubmit} className="flex flex-col gap-4 bg-white p-6 rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-200 max-w-sm w-full relative">
+            <button type="button" onClick={() => setShowServicioForm(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors bg-slate-50 hover:bg-slate-100 p-1.5 rounded-full">
+              <X className="w-5 h-5" />
+            </button>
+            <div className="text-center mb-2 mt-2">
+              <h4 className="font-bold text-[#0F3160] text-xl">Alta de Servicio</h4>
+            </div>
+            
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Nombre del Servicio <span className="text-red-500">*</span></label>
+              <input type="text" placeholder="Ej. EDEA, Camuzzi, Personal" value={sNombre} onChange={(e) => setSNombre(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400" />
+            </div>
+
+            <div className="flex gap-3 mt-4">
+              <button type="button" onClick={() => setShowServicioForm(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors font-bold py-3.5 rounded-xl">Cancelar</button>
+              <button type="submit" className="flex-1 bg-[#0F3160] hover:bg-[#0a244a] transition-colors text-white font-bold py-3.5 rounded-xl shadow-md">Crear</button>
+            </div>
+          </form>
+        </div>
+      )}
+
     </div>
   );
 }
