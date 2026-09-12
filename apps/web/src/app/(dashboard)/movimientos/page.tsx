@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import PageHeader from '@/components/ui/PageHeader';
 import BlankState from '@/components/ui/BlankState';
+import { ConfirmDeleteDialog } from '@/components/ui/ConfirmDeleteDialog';
 import { FileText, Edit2, Trash2 } from 'lucide-react';
 
 import { Movimiento } from '@/types';
@@ -17,7 +18,9 @@ export default function MovimientosPage() {
   const [categoria, setCategoria] = useState('');
   const [categoriasOpt, setCategoriasOpt] = useState<{id: string, nombre: string, tipo: string}[]>([]);
   const [descripcion, setDescripcion] = useState('');
+  const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
   const [editId, setEditId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const fetchMovimientos = async () => {
     try {
@@ -76,13 +79,14 @@ export default function MovimientosPage() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo, monto, categoria, descripcion }),
+        body: JSON.stringify({ tipo, monto, categoria, descripcion, fecha }),
       });
       
       if (res.ok) {
         setMonto('');
         setCategoria('');
         setDescripcion('');
+        setFecha(new Date().toISOString().split('T')[0]);
         setEditId(null);
         fetchMovimientos();
       }
@@ -97,18 +101,16 @@ export default function MovimientosPage() {
     setMonto(m.monto.toString());
     setCategoria(m.categoria);
     setDescripcion(m.descripcion || '');
+    setFecha(m.fecha.split('T')[0]);
     // Hacer scroll arriba para ver el form
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este movimiento?')) return;
-    try {
-      const res = await fetch(`/api/movimientos/${id}`, { method: 'DELETE' });
-      if (res.ok) fetchMovimientos();
-    } catch (e) {
-      console.error(e);
-    }
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    const res = await fetch(`/api/movimientos/${deleteId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Error al eliminar el movimiento');
+    fetchMovimientos();
   };
 
   return (
@@ -123,20 +125,36 @@ export default function MovimientosPage() {
         {editId && (
           <button 
             type="button" 
-            onClick={() => { setEditId(null); setMonto(''); setCategoria(''); setDescripcion(''); }}
+            onClick={() => { 
+              setEditId(null); 
+              setMonto(''); 
+              setCategoria(''); 
+              setDescripcion(''); 
+              setFecha(new Date().toISOString().split('T')[0]);
+            }}
             className="absolute top-6 right-6 text-sm text-slate-400 hover:text-slate-600 font-medium"
           >
             Cancelar Edición
           </button>
         )}
         <h3 className="text-xl font-semibold mb-4 text-[#0F3160]">{editId ? 'Editar Movimiento' : 'Cargar Nuevo'}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="flex flex-col gap-1">
             <label className="text-sm text-slate-500">Tipo</label>
             <select value={tipo} onChange={(e) => setTipo(e.target.value)} required className="input-field">
               <option value="EGRESO">Egreso (Gasto)</option>
               <option value="INGRESO">Ingreso</option>
             </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm text-slate-500">Fecha</label>
+            <input 
+              type="date" 
+              value={fecha} 
+              onChange={(e) => setFecha(e.target.value)} 
+              required 
+              className="input-field"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm text-slate-500">Monto</label>
@@ -202,7 +220,6 @@ export default function MovimientosPage() {
               <th className="p-4 border-b border-slate-200 text-slate-500 font-medium">Categoría</th>
               <th className="p-4 border-b border-slate-200 text-slate-500 font-medium">Descripción</th>
               <th className="p-4 border-b border-slate-200 text-slate-500 font-medium">Monto</th>
-              <th className="p-4 border-b border-slate-200 text-slate-500 font-medium">Origen</th>
               <th className="p-4 border-b border-slate-200 text-slate-500 font-medium text-right">Acciones</th>
             </tr>
           </thead>
@@ -232,13 +249,12 @@ export default function MovimientosPage() {
                   <td className={`p-4 border-b border-slate-200 font-semibold ${m.tipo === 'INGRESO' ? 'text-primary' : 'text-danger'}`}>
                     {Number(m.monto).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
                   </td>
-                  <td className="p-4 border-b border-slate-200 text-slate-600">{m.origen}</td>
                   <td className="p-4 border-b border-slate-200 text-right">
                     <div className="flex justify-end gap-2">
                       <button onClick={() => handleEdit(m)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(m.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
+                      <button onClick={() => setDeleteId(m.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -249,6 +265,14 @@ export default function MovimientosPage() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmDeleteDialog
+        isOpen={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+        title="¿Eliminar movimiento?"
+        description="¿Estás seguro de que deseas eliminar este movimiento? Esta acción no se puede deshacer."
+      />
     </div>
   );
 }

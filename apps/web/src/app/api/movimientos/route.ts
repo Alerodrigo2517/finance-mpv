@@ -38,6 +38,7 @@ export async function POST(request: Request) {
         monto: parseFloat(data.monto),
         categoria: data.categoria,
         descripcion: data.descripcion,
+        fecha: data.fecha ? new Date(data.fecha).toISOString() : new Date().toISOString(),
         origen: data.origen || 'MANUAL',
         usuario_id: user.id, // Supabase schema uses usuario_id instead of usuarioId
       })

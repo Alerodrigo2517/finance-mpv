@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import PageHeader from '@/components/ui/PageHeader';
+import { ConfirmDeleteDialog } from '@/components/ui/ConfirmDeleteDialog';
 import { Trash2, Plus, Tag, Edit2, Save, X } from 'lucide-react';
 
 type Categoria = {
@@ -16,6 +17,7 @@ export default function ConfiguracionPage() {
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevoTipo, setNuevoTipo] = useState('EGRESO');
   const [editId, setEditId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const fetchCategorias = async () => {
@@ -76,16 +78,11 @@ export default function ConfiguracionPage() {
     setNuevoNombre('');
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta categoría? (Los movimientos existentes mantendrán el nombre).')) return;
-    try {
-      const res = await fetch(`/api/categorias/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        fetchCategorias();
-      }
-    } catch (e) {
-      console.error(e);
-    }
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    const res = await fetch(`/api/categorias/${deleteId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Error al eliminar la categoría');
+    fetchCategorias();
   };
 
   const ingresos = categorias.filter(c => c.tipo === 'INGRESO');
@@ -178,7 +175,7 @@ export default function ConfiguracionPage() {
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button 
-                        onClick={() => handleDelete(c.id)}
+                        onClick={() => setDeleteId(c.id)}
                         className="text-slate-400 hover:text-danger hover:bg-danger/10 p-1.5 rounded-full transition-colors"
                         title="Eliminar categoría"
                       >
@@ -215,7 +212,7 @@ export default function ConfiguracionPage() {
                       </button>
                       <button 
                         type="button"
-                        onClick={() => handleDelete(c.id)}
+                        onClick={() => setDeleteId(c.id)}
                         className="text-slate-400 hover:text-danger hover:bg-danger/10 p-1.5 rounded-full transition-colors"
                         title="Eliminar categoría"
                       >
@@ -231,6 +228,14 @@ export default function ConfiguracionPage() {
         </div>
 
       </div>
+
+      <ConfirmDeleteDialog
+        isOpen={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+        title="¿Eliminar categoría?"
+        description="¿Estás seguro de que deseas eliminar esta categoría? (Los movimientos existentes mantendrán el nombre)."
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { ChevronLeft, Plus, Receipt, Loader2, UploadCloud, FileText, Download, E
 import Link from 'next/link';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import FacturasList from '@/components/FacturasList';
+import { ConfirmDeleteDialog } from '@/components/ui/ConfirmDeleteDialog';
 
 import { Servicio, Factura } from '@/types';
 
@@ -13,6 +14,7 @@ export default function ServiciosPage() {
 
   // Master-Detail State
   const [selectedServicioId, setSelectedServicioId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{type: 'servicio' | 'factura', id: string} | null>(null);
 
   // States for Modals/Forms
   const [showServicioForm, setShowServicioForm] = useState(false);
@@ -144,27 +146,33 @@ export default function ServiciosPage() {
     setUploadTab('manual');
   };
 
-  const handleDeleteServicio = async (e: React.MouseEvent, id: string) => {
+  const handleDeleteServicio = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!confirm('¿Estás seguro de que deseas eliminar este servicio y todas sus facturas?')) return;
-    try {
-      const res = await fetch(`/api/servicios/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        if (selectedServicioId === id) setSelectedServicioId(null);
-        fetchData();
-      }
-    } catch (err) {
-      console.error(err);
-    }
+    setDeleteTarget({ type: 'servicio', id });
   };
 
-  const handleDeleteFactura = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar esta factura?')) return;
-    try {
-      const res = await fetch(`/api/facturas/${id}`, { method: 'DELETE' });
-      if (res.ok) fetchData();
-    } catch (err) {
-      console.error(err);
+  const handleDeleteFactura = (id: string) => {
+    setDeleteTarget({ type: 'factura', id });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    
+    if (deleteTarget.type === 'servicio') {
+      const res = await fetch(`/api/servicios/${deleteTarget.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        if (selectedServicioId === deleteTarget.id) setSelectedServicioId(null);
+        fetchData();
+      } else {
+        throw new Error('Error al eliminar el servicio');
+      }
+    } else {
+      const res = await fetch(`/api/facturas/${deleteTarget.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchData();
+      } else {
+        throw new Error('Error al eliminar la factura');
+      }
     }
   };
 
@@ -485,6 +493,16 @@ export default function ServiciosPage() {
           )}
         </div>
       )}
+
+      <ConfirmDeleteDialog
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title={deleteTarget?.type === 'servicio' ? "¿Eliminar servicio?" : "¿Eliminar factura?"}
+        description={deleteTarget?.type === 'servicio' 
+          ? "¿Estás seguro de que deseas eliminar este servicio y TODAS sus facturas? Esta acción no se puede deshacer."
+          : "¿Estás seguro de que deseas eliminar esta factura? Esta acción no se puede deshacer."}
+      />
     </div>
   );
 }

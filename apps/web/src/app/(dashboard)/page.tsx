@@ -89,9 +89,20 @@ export default async function Home() {
               Todavía no cargaste ningún gasto este mes.
             </div>
           ) : (
-             <div className="space-y-4">
-               {/* Lista de movimientos simplificada */}
-               <div className="text-sm text-slate-500">Se mostrarán aquí...</div>
+             <div className="space-y-3 mt-4">
+               {movimientos.slice(0, 5).map((m) => (
+                 <div key={m.id} className="flex justify-between items-center bg-slate-50 hover:bg-slate-100 transition-colors p-4 rounded-xl border border-slate-100">
+                   <div className="flex flex-col">
+                     <span className="font-bold text-slate-800 text-sm">{m.categoria}</span>
+                     <span className="text-xs text-slate-500 font-medium mt-0.5">
+                       {new Date(m.fecha).toLocaleDateString()} {m.descripcion ? `• ${m.descripcion}` : ''}
+                     </span>
+                   </div>
+                   <span className={`font-bold tracking-tight ${m.tipo === 'INGRESO' ? 'text-primary' : 'text-danger'}`}>
+                     {m.tipo === 'INGRESO' ? '+' : '-'}{Number(m.monto).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
+                   </span>
+                 </div>
+               ))}
              </div>
           )}
         </div>
@@ -99,7 +110,7 @@ export default async function Home() {
       
       {/* Botón Flotante (CTA Principal) */}
       <div className="fixed bottom-8 right-8 z-50">
-        <a href="/movimientos/nuevo" className="bg-primary hover:bg-primaryHover text-[#0b0f19] p-4 rounded-full shadow-lg shadow-primary/20 flex items-center justify-center transition-transform hover:scale-105 group">
+        <a href="/movimientos" className="bg-primary hover:bg-primaryHover text-[#0b0f19] p-4 rounded-full shadow-lg shadow-primary/20 flex items-center justify-center transition-transform hover:scale-105 group">
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
           {/* Tooltip on hover */}
           <span className="absolute right-full mr-4 bg-slate-800 text-white px-3 py-1.5 rounded-lg text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-md">
