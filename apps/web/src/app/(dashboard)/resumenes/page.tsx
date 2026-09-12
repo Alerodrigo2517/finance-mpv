@@ -68,9 +68,9 @@ export default async function ResumenesPage(props: { searchParams: Promise<{ [ke
   const agrupado: Record<string, { id: string, mes: number, anio: number, totalIngresos: number, totalEgresos: number, saldo: number, estado: string }> = {};
 
   (todosLosMovimientos || []).forEach(m => {
-    const date = new Date(m.fecha);
-    const anio = date.getFullYear();
-    const mes = date.getMonth() + 1;
+    const [yearStr, monthStr] = m.fecha.split('T')[0].split('-');
+    const anio = parseInt(yearStr, 10);
+    const mes = parseInt(monthStr, 10);
     const key = `${anio}-${mes}`;
 
     // Excluir el mes actualmente visualizado

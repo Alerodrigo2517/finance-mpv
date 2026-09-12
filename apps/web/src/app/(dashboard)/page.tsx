@@ -37,8 +37,11 @@ export default async function Home() {
     else if (m.tipo === 'EGRESO') saldo -= m.monto;
 
     // Ingresos y egresos específicamente de este mes
-    const d = new Date(m.fecha);
-    if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+    const [yearStr, monthStr] = m.fecha.split('T')[0].split('-');
+    const mYear = parseInt(yearStr, 10);
+    const mMonth = parseInt(monthStr, 10) - 1; // 0-indexed for JS compatibility
+
+    if (mMonth === currentMonth && mYear === currentYear) {
       if (m.tipo === 'INGRESO') ingresosMes += m.monto;
       else if (m.tipo === 'EGRESO') egresosMes += m.monto;
     }

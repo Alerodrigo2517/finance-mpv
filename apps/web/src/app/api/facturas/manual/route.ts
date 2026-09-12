@@ -33,9 +33,13 @@ export async function POST(request: Request) {
       .insert({
         servicio_id: servicioId,
         monto: parseFloat(monto),
-        fecha_vencimiento: new Date(fechaVencimiento).toISOString(),
-        periodo_desde: periodoDesde ? new Date(periodoDesde).toISOString() : new Date().toISOString(),
-        periodo_hasta: periodoHasta ? new Date(periodoHasta).toISOString() : new Date().toISOString(),
+        fecha_vencimiento: fechaVencimiento.includes('T') ? new Date(fechaVencimiento).toISOString() : new Date(`${fechaVencimiento}T12:00:00Z`).toISOString(),
+        periodo_desde: periodoDesde 
+          ? (periodoDesde.includes('T') ? new Date(periodoDesde).toISOString() : new Date(`${periodoDesde}T12:00:00Z`).toISOString()) 
+          : new Date().toISOString(),
+        periodo_hasta: periodoHasta 
+          ? (periodoHasta.includes('T') ? new Date(periodoHasta).toISOString() : new Date(`${periodoHasta}T12:00:00Z`).toISOString()) 
+          : new Date().toISOString(),
         kw_consumidos: kwConsumidos ? parseFloat(kwConsumidos) : null,
         estado: 'PENDIENTE',
       })
@@ -45,7 +49,7 @@ export async function POST(request: Request) {
     if (facturaError) throw facturaError;
 
     // Create Alerta (5 días antes del vencimiento)
-    const fechaVenc = new Date(fechaVencimiento);
+    const fechaVenc = new Date(factura.fecha_vencimiento);
     const fechaAlerta = new Date(fechaVenc);
     fechaAlerta.setDate(fechaAlerta.getDate() - 5);
     

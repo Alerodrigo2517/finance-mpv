@@ -209,8 +209,11 @@ export default function ServiciosPage() {
   servicios.forEach(s => {
     if (s.facturas) {
       s.facturas.forEach(f => {
-        const d = new Date(f.fechaVencimiento || '');
-        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear && f.estado !== 'PENDIENTE') {
+        const dStr = f.fechaVencimiento || '';
+        const fMonth = dStr ? parseInt(dStr.split('T')[0].split('-')[1], 10) - 1 : -1;
+        const fYear = dStr ? parseInt(dStr.split('T')[0].split('-')[0], 10) : -1;
+        
+        if (fMonth === currentMonth && fYear === currentYear && f.estado !== 'PENDIENTE') {
           gastoMesTotal += Number(f.monto);
         }
         if (f.estado === 'PENDIENTE') {
@@ -229,14 +232,16 @@ export default function ServiciosPage() {
 
   if (selectedServicio?.facturas) {
     selectedServicio.facturas.forEach(f => {
-      const d = new Date(f.fechaVencimiento || '');
-      if (d.getFullYear() === currentYear && f.estado !== 'PENDIENTE') {
+      const dStr = f.fechaVencimiento || '';
+      const fYear = dStr ? parseInt(dStr.split('T')[0].split('-')[0], 10) : -1;
+      
+      if (fYear === currentYear && f.estado !== 'PENDIENTE') {
         gastoAnoServicio += Number(f.monto);
       }
       if (f.estado === 'PENDIENTE') {
         pendientePagoServicio += Number(f.monto);
       }
-      if (d.getFullYear() === currentYear && f.kwConsumidos) {
+      if (fYear === currentYear && f.kwConsumidos) {
         consumosAnuales.push(Number(f.kwConsumidos));
       }
     });

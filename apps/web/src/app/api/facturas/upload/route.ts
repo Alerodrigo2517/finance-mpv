@@ -133,14 +133,24 @@ export async function POST(request: Request) {
         .from('factura_servicios')
         .insert({
           servicio_id: servicio.id,
-          periodo_desde: parsedData.periodoDesde ? new Date(parsedData.periodoDesde).toISOString() : new Date().toISOString(),
-          periodo_hasta: parsedData.periodoHasta ? new Date(parsedData.periodoHasta).toISOString() : new Date().toISOString(),
-          fecha_vencimiento: parsedData.fechaVencimiento ? new Date(parsedData.fechaVencimiento).toISOString() : new Date().toISOString(),
+          periodo_desde: parsedData.periodoDesde 
+            ? (parsedData.periodoDesde.includes('T') ? new Date(parsedData.periodoDesde).toISOString() : new Date(`${parsedData.periodoDesde}T12:00:00Z`).toISOString()) 
+            : new Date().toISOString(),
+          periodo_hasta: parsedData.periodoHasta 
+            ? (parsedData.periodoHasta.includes('T') ? new Date(parsedData.periodoHasta).toISOString() : new Date(`${parsedData.periodoHasta}T12:00:00Z`).toISOString()) 
+            : new Date().toISOString(),
+          fecha_vencimiento: parsedData.fechaVencimiento 
+            ? (parsedData.fechaVencimiento.includes('T') ? new Date(parsedData.fechaVencimiento).toISOString() : new Date(`${parsedData.fechaVencimiento}T12:00:00Z`).toISOString()) 
+            : new Date().toISOString(),
           monto: parsedData.monto || 0,
           estado: 'PENDIENTE',
           kw_consumidos: parsedData.kwConsumidos,
-          fecha_emision: parsedData.fechaEmision ? new Date(parsedData.fechaEmision).toISOString() : null,
-          proxima_fecha_vencimiento: parsedData.proximaFechaVencimiento ? new Date(parsedData.proximaFechaVencimiento).toISOString() : null,
+          fecha_emision: parsedData.fechaEmision 
+            ? (parsedData.fechaEmision.includes('T') ? new Date(parsedData.fechaEmision).toISOString() : new Date(`${parsedData.fechaEmision}T12:00:00Z`).toISOString()) 
+            : null,
+          proxima_fecha_vencimiento: parsedData.proximaFechaVencimiento 
+            ? (parsedData.proximaFechaVencimiento.includes('T') ? new Date(parsedData.proximaFechaVencimiento).toISOString() : new Date(`${parsedData.proximaFechaVencimiento}T12:00:00Z`).toISOString()) 
+            : null,
           archivo_url: archivoUrl
         })
         .select()
@@ -150,7 +160,7 @@ export async function POST(request: Request) {
 
       // 5. Create Alerta (5 días antes del vencimiento)
       if (parsedData.fechaVencimiento && factura) {
-        const fechaVenc = new Date(parsedData.fechaVencimiento);
+        const fechaVenc = new Date(factura.fecha_vencimiento);
         const fechaAlerta = new Date(fechaVenc);
         fechaAlerta.setDate(fechaAlerta.getDate() - 5);
         
