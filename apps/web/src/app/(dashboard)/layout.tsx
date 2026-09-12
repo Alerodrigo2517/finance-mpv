@@ -1,8 +1,9 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import LogoutButton from '@/components/LogoutButton';
-import { Wallet, Bell, Grid, MoreHorizontal, LayoutDashboard, ArrowRightLeft, Receipt, Settings } from 'lucide-react';
+import { Wallet, Bell, Grid, MoreHorizontal, LayoutDashboard, ArrowRightLeft, Receipt, Settings, X } from 'lucide-react';
 
 export default function DashboardLayout({
   children,
@@ -20,11 +21,12 @@ export default function DashboardLayout({
   ];
 
   const mobileNavItems = [
-    { href: '/', label: 'Resumen', icon: Wallet },
-    { href: '/alertas', label: 'Alertas', icon: Bell },
-    { href: '/herramientas', label: 'Herramientas', icon: Grid },
-    { href: '/perfil', label: 'Más', icon: MoreHorizontal },
+    { href: '/', label: 'Resumen', icon: LayoutDashboard },
+    { href: '/movimientos', label: 'Movimientos', icon: ArrowRightLeft },
+    { href: '/servicios', label: 'Servicios', icon: Receipt },
   ];
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F8FAFC]">
@@ -67,14 +69,15 @@ export default function DashboardLayout({
       </main>
 
       {/* Bottom Navigation Bar (Sólo visible en móviles) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center p-2 pb-6 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center p-2 pb-6 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         {mobileNavItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           return (
             <Link 
               key={item.href} 
               href={item.href} 
-              className={`flex flex-col items-center p-2 ${
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex flex-col items-center p-2 flex-1 ${
                 isActive 
                   ? 'text-[#0F3160] border-t-2 border-[#0F3160] -mt-[2px]' 
                   : 'text-slate-400 hover:text-[#0F3160]'
@@ -85,7 +88,44 @@ export default function DashboardLayout({
             </Link>
           );
         })}
+        <button 
+          onClick={() => setMobileMenuOpen(true)}
+          className={`flex flex-col items-center p-2 flex-1 ${
+            mobileMenuOpen 
+              ? 'text-[#0F3160] border-t-2 border-[#0F3160] -mt-[2px]' 
+              : 'text-slate-400 hover:text-[#0F3160]'
+          }`}
+        >
+          <MoreHorizontal className="w-6 h-6 mb-1" />
+          <span className={`text-[10px] ${mobileMenuOpen ? 'font-bold' : 'font-medium'}`}>Más</span>
+        </button>
       </nav>
+
+      {/* Mobile More Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm animate-in fade-in flex items-end">
+          <div className="bg-white w-full rounded-t-3xl p-6 pb-24 shadow-2xl transform animate-in slide-in-from-bottom-full duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-[#0F3160]">Menú</h3>
+              <button onClick={() => setMobileMenuOpen(false)} className="p-2 bg-slate-100 rounded-full text-slate-500">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Link href="/herramientas" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors text-slate-700 font-medium">
+                <Grid className="w-5 h-5 text-slate-400" /> Herramientas
+              </Link>
+              <Link href="/configuracion" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-4 p-4 rounded-xl hover:bg-slate-50 transition-colors text-slate-700 font-medium">
+                <Settings className="w-5 h-5 text-slate-400" /> Configuración
+              </Link>
+              <div className="h-px bg-slate-100 my-2"></div>
+              <div className="p-2" onClick={() => setMobileMenuOpen(false)}>
+                <LogoutButton />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -286,18 +286,18 @@ function MovimientosContent() {
         
         {/* Barra de Acciones Masivas */}
         {selectedIds.size > 0 && (
-          <div className="bg-blue-50/90 backdrop-blur-md border-b border-blue-100 p-4 flex justify-between items-center animate-in slide-in-from-top-2">
-            <span className="text-[#0F3160] font-bold text-sm">
+          <div className="bg-blue-50/90 backdrop-blur-md border-b border-blue-100 p-4 flex flex-col sm:flex-row justify-between items-center gap-3 animate-in slide-in-from-top-2">
+            <span className="text-[#0F3160] font-bold text-sm text-center sm:text-left">
               {selectedIds.size} movimiento{selectedIds.size !== 1 ? 's' : ''} seleccionado{selectedIds.size !== 1 ? 's' : ''}
             </span>
-            <div className="flex gap-3 items-center">
+            <div className="flex gap-3 items-center w-full sm:w-auto justify-between sm:justify-end">
               <button onClick={() => setSelectedIds(new Set())} className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
                 Cancelar
               </button>
               <button 
                 onClick={() => setShowBulkConfirm(true)}
                 disabled={bulkDeleting}
-                className="bg-danger hover:bg-red-600 text-white text-sm px-4 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-colors disabled:opacity-50"
+                className="bg-danger hover:bg-red-600 text-white text-sm px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-colors disabled:opacity-50 flex-1 sm:flex-none justify-center"
               >
                 <Trash2 className="w-4 h-4" /> {bulkDeleting ? 'Eliminando...' : 'Eliminar'}
               </button>
@@ -306,7 +306,8 @@ function MovimientosContent() {
         )}
 
         <div className="overflow-x-auto w-full">
-          <table className="w-full border-collapse text-left">
+          {/* Vista Desktop (Tabla) */}
+          <table className="hidden md:table w-full border-collapse text-left">
           <thead>
             <tr>
               <th className="p-4 border-b border-slate-200 w-12">
@@ -375,6 +376,64 @@ function MovimientosContent() {
             )}
           </tbody>
         </table>
+
+        {/* Vista Móvil (Tarjetas) */}
+        <div className="md:hidden flex flex-col divide-y divide-slate-100">
+          {loading ? (
+            <div className="text-center p-8 text-slate-500">Cargando...</div>
+          ) : movimientos.length === 0 ? (
+            <div className="p-4">
+              <BlankState variant="not-found" Icon={FileText} title="Sin movimientos" description="Todavía no cargaste ningún gasto." />
+            </div>
+          ) : (
+            <div className="p-4 flex items-center justify-between bg-slate-50 border-b border-slate-100">
+              <label className="flex items-center gap-2 text-sm font-medium text-[#0F3160] cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 rounded border-slate-300 text-[#0F3160] focus:ring-[#0F3160] cursor-pointer"
+                  checked={movimientos.length > 0 && selectedIds.size === movimientos.length}
+                  onChange={toggleAll}
+                  disabled={movimientos.length === 0}
+                />
+                Seleccionar todos
+              </label>
+            </div>
+          )}
+          {movimientos.map((m) => (
+            <div key={m.id} className={`p-4 flex flex-col gap-3 transition-colors ${selectedIds.has(m.id) ? 'bg-blue-50/40' : 'bg-white'}`}>
+              <div className="flex justify-between items-start">
+                <div className="flex items-start gap-3">
+                  <input 
+                    type="checkbox" 
+                    className="w-5 h-5 rounded border-slate-300 text-[#0F3160] focus:ring-[#0F3160] cursor-pointer mt-0.5"
+                    checked={selectedIds.has(m.id)}
+                    onChange={() => toggleSelection(m.id)}
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-[#0F3160] text-base">{m.categoria}</span>
+                    <span className="text-xs font-medium text-slate-500">{new Date(m.fecha).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                <span className={`font-bold text-lg whitespace-nowrap ${m.tipo === 'INGRESO' ? 'text-primary' : 'text-danger'}`}>
+                  {m.tipo === 'INGRESO' ? '+' : '-'}{Number(m.monto).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
+                </span>
+              </div>
+              {m.descripcion && (
+                <div className="pl-8 text-sm text-slate-600">
+                  {m.descripcion}
+                </div>
+              )}
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-50 mt-1">
+                <button onClick={() => handleEdit(m)} className="px-3 py-1.5 text-slate-500 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
+                  <Edit2 className="w-3.5 h-3.5" /> Editar
+                </button>
+                <button onClick={() => setDeleteId(m.id)} className="px-3 py-1.5 text-slate-500 hover:text-red-600 bg-slate-50 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
+                  <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
         </div>
       </div>
 
