@@ -85,12 +85,17 @@ export default function ServiciosPage() {
     setDeleteTarget({ type: 'factura', id });
   };
 
-  const handlePayFactura = async (id: string) => {
+  const handlePayFactura = async (id: string, metodoPago?: string) => {
     try {
+      const payload: any = { estado: 'PAGADA' };
+      if (metodoPago) {
+        payload.metodo_pago = metodoPago;
+      }
+      
       const res = await fetch(`/api/facturas/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: 'PAGADA' }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         await fetchData();

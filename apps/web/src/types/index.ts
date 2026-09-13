@@ -25,6 +25,12 @@ export interface Factura {
   kwConsumidos?: number;
   archivo_url?: string;
   archivoUrl?: string;
+  comprobante_url?: string;
+  comprobanteUrl?: string;
+  metodo_pago?: string;
+  metodoPago?: string;
+  fecha_pago?: string;
+  fechaPago?: string;
   created_at?: string;
 }
 

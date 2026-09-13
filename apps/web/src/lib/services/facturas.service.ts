@@ -98,7 +98,8 @@ export async function marcarFacturaComoPagada(
 export async function actualizarEstadoFactura(
   facturaId: string,
   estado: string,
-  usuarioId: string
+  usuarioId: string,
+  metodoPago?: string
 ): Promise<Factura> {
   const supabase = await createClient();
 
@@ -112,11 +113,13 @@ export async function actualizarEstadoFactura(
     throw new Error('Factura no encontrada o no pertenece al usuario');
   }
 
-  const dataToUpdate: Partial<Factura> & { fecha_pago?: string | null } = { estado: estado as Factura['estado'] };
+  const dataToUpdate: Partial<Factura> & { fecha_pago?: string | null, metodo_pago?: string | null } = { estado: estado as Factura['estado'] };
   if (estado === 'PAGADA') {
     dataToUpdate.fecha_pago = new Date().toISOString();
+    if (metodoPago) dataToUpdate.metodo_pago = metodoPago;
   } else if (estado === 'PENDIENTE') {
     dataToUpdate.fecha_pago = null;
+    dataToUpdate.metodo_pago = null;
   }
 
   const { data: facturaActualizada, error } = await supabase

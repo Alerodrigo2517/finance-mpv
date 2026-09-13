@@ -13,7 +13,7 @@ interface ServicioDetailViewProps {
   availableYears: number[];
   sortedFacturas: Factura[];
   handleDeleteFactura: (id: string) => void;
-  handlePayFactura: (id: string) => Promise<void>;
+  handlePayFactura: (id: string, metodoPago?: string) => Promise<void>;
   handleEditFacturaClick: (f: Factura) => void;
   fetchData: () => void;
 }
@@ -33,6 +33,16 @@ export default function ServicioDetailView({
   fetchData
 }: ServicioDetailViewProps) {
   const [showUpload, setShowUpload] = useState(false);
+  const [metodoPagoFilter, setMetodoPagoFilter] = useState('TODOS');
+
+  const filteredFacturas = sortedFacturas.filter(f => {
+    if (metodoPagoFilter === 'TODOS') return true;
+    const m = f.metodoPago || (f as any).metodo_pago;
+    if (metodoPagoFilter === 'SIN REGISTRO') {
+       return f.estado === 'PAGADA' && !m;
+    }
+    return m === metodoPagoFilter;
+  });
   return (
     <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-right-8 duration-300">
       {/* Top Summaries Right */}
@@ -75,22 +85,41 @@ export default function ServicioDetailView({
         </div>
       )}
 
-      <div className="flex justify-between items-center mt-2 px-2">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-          <span>Todas las facturas de</span>
-          <select 
-            value={selectedYear} 
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="bg-transparent font-bold text-[#0F3160] border-b-2 border-slate-200 focus:outline-none focus:border-[#0F3160] cursor-pointer"
-          >
-            {availableYears.map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-2 px-2 gap-4">
+        <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <div className="flex items-center gap-2">
+            <span>Todas las facturas de</span>
+            <select 
+              value={selectedYear} 
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="bg-transparent font-bold text-[#0F3160] border-b-2 border-slate-200 focus:outline-none focus:border-[#0F3160] cursor-pointer"
+            >
+              {availableYears.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span>Método:</span>
+            <select 
+              value={metodoPagoFilter} 
+              onChange={(e) => setMetodoPagoFilter(e.target.value)}
+              className="bg-transparent font-bold text-[#0F3160] border-b-2 border-slate-200 focus:outline-none focus:border-[#0F3160] cursor-pointer"
+            >
+              <option value="TODOS">Todos</option>
+              <option value="Efectivo">Efectivo</option>
+              <option value="Mercado Pago">Mercado Pago</option>
+              <option value="Cuenta DNI">Cuenta DNI</option>
+              <option value="Banco Nación">Banco Nación</option>
+              <option value="Banco (Otro)">Banco (Otro)</option>
+              <option value="SIN REGISTRO">Sin registro</option>
+            </select>
+          </div>
         </div>
         <button 
           onClick={() => setShowUpload(!showUpload)}
-          className="text-[10px] font-bold bg-[#0F3160] text-white px-3 py-1.5 rounded-lg shadow-sm hover:bg-[#0a244a] transition-colors"
+          className="text-[10px] font-bold bg-[#0F3160] text-white px-3 py-1.5 rounded-lg shadow-sm hover:bg-[#0a244a] transition-colors whitespace-nowrap"
         >
           {showUpload ? 'Cerrar' : '+ Cargar factura'}
         </button>
@@ -106,7 +135,7 @@ export default function ServicioDetailView({
 
       {/* List of Facturas for Detail */}
       <FacturasList 
-        facturas={sortedFacturas} 
+        facturas={filteredFacturas} 
         nombreProveedor={selectedServicio.nombreProveedor || (selectedServicio as any).nombre_proveedor || ''} 
         onDeleteFactura={handleDeleteFactura} 
         onPayFactura={handlePayFactura}

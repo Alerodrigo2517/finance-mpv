@@ -19,7 +19,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const facturaActualizada = await actualizarEstadoFactura(
       facturaId,
       data.estado,
-      user.id
+      user.id,
+      data.metodo_pago
     );
 
     return NextResponse.json(facturaActualizada);
