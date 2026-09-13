@@ -15,7 +15,7 @@ export default function DashboardLayout({
   const navItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/movimientos', label: 'Movimientos', icon: ArrowRightLeft },
-    { href: '/servicios', label: 'Servicios & Deudas', icon: Receipt },
+    { href: '/servicios', label: 'Servicios', icon: Receipt },
     { href: '/herramientas', label: 'Herramientas', icon: Grid },
     { href: '/configuracion', label: 'Configuración', icon: Settings },
   ];

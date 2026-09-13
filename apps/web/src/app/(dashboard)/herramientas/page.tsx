@@ -18,13 +18,6 @@ export default function HerramientasPage() {
           Icon={ShoppingBag}
           href="/stock"
         />
-        
-        <ActionCard 
-          title="Gastos del mes"
-          subtitle="4 items pendientes"
-          Icon={ReceiptText}
-          href="/movimientos"
-        />
 
         <ActionCard 
           title="Vehículos"

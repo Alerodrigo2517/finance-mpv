@@ -27,11 +27,17 @@ export default function RegisterPage() {
       if (res.ok) {
         router.push('/login');
       } else {
-        const data = await res.json();
-        setError(data.error || 'Error al registrarse');
+        let errStr = 'Error al registrarse';
+        try {
+          const data = await res.json();
+          errStr = data.error || errStr;
+        } catch(err2) {
+          errStr = `Error del servidor: ${res.status} ${res.statusText}`;
+        }
+        setError(errStr);
       }
-    } catch (e) {
-      setError('Error de conexión');
+    } catch (e: any) {
+      setError(e.message || 'Error de conexión');
     } finally {
       setLoading(false);
     }

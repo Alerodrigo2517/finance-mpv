@@ -46,12 +46,19 @@ export default function ServicioDetailView({
   return (
     <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-right-8 duration-300">
       {/* Top Summaries Right */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         <div className="glass-panel p-5 md:p-6 flex flex-col gap-1 md:gap-2 relative overflow-hidden group">
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
           <span className="text-slate-500 font-medium text-sm">Total Facturado (Año)</span>
           <span className="text-3xl md:text-4xl font-bold text-slate-800">
             ${gastoAnoServicio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+          </span>
+        </div>
+        <div className="glass-panel p-5 md:p-6 flex flex-col gap-1 md:gap-2 relative overflow-hidden group">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all"></div>
+          <span className="text-slate-500 font-medium text-sm">Ya pagado (Año)</span>
+          <span className="text-3xl md:text-4xl font-bold text-emerald-600">
+            ${(gastoAnoServicio - pendientePagoServicio).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
           </span>
         </div>
         <div className="glass-panel p-5 md:p-6 flex flex-col gap-1 md:gap-2 relative overflow-hidden group">
