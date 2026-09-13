@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { Movimiento } from '@/types';
+import OnboardingDialog from '@/components/ui/OnboardingDialog';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +9,7 @@ export default async function Home() {
   const { data: { user } } = await supabase.auth.getUser();
 
   let movimientos: Movimiento[] = [];
+  let serviciosCount = 0;
   let ingresosMes = 0;
   let egresosMes = 0;
   let saldo = 0;
@@ -22,10 +24,21 @@ export default async function Home() {
       if (!error && data) {
         movimientos = data;
       }
+
+      const { count: sCount, error: sError } = await supabase
+        .from('servicios')
+        .select('*', { count: 'exact', head: true })
+        .eq('usuario_id', user.id);
+        
+      if (!sError && sCount !== null) {
+        serviciosCount = sCount;
+      }
     }
   } catch (error) {
     console.error('Error conectando a la BD. Mostrando datos mockeados:', error);
   }
+
+  const isSystemEmpty = movimientos.length === 0 && serviciosCount === 0;
 
   const now = new Date();
   const currentMonth = now.getMonth();
@@ -135,6 +148,8 @@ export default async function Home() {
           </span>
         </a>
       </div>
+      
+      <OnboardingDialog isOpen={isSystemEmpty} />
     </div>
   );
 }
