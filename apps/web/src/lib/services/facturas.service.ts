@@ -9,6 +9,22 @@ export type CrearFacturaData = {
   monto: number;
 };
 
+export type EditarFacturaData = {
+  periodoDesde?: Date;
+  periodoHasta?: Date;
+  fechaVencimiento?: Date;
+  monto?: number;
+  kwConsumidos?: number;
+};
+
+export type EditarFacturaData = {
+  periodoDesde?: Date;
+  periodoHasta?: Date;
+  fechaVencimiento?: Date;
+  monto?: number;
+  kwConsumidos?: number;
+};
+
 /**
  * Crea una nueva factura para un servicio.
  * Asegura que el servicio pertenezca al usuario especificado.
@@ -94,7 +110,7 @@ export async function actualizarEstadoFactura(
 
   const { data: factura } = await supabase
     .from('factura_servicios')
-    .select('*, servicios(usuario_id)')
+    .select('*, servicios(usuario_id, nombre_proveedor)')
     .eq('id', facturaId)
     .single();
 
@@ -112,6 +128,56 @@ export async function actualizarEstadoFactura(
   const { data: facturaActualizada, error } = await supabase
     .from('factura_servicios')
     .update(dataToUpdate)
+    .eq('id', facturaId)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  if (estado === 'PAGADA' && factura.estado !== 'PAGADA') {
+    await supabase.from('movimientos').insert({
+      tipo: 'EGRESO',
+      monto: factura.monto,
+      categoria: 'Servicios',
+      descripcion: `Pago de ${factura.servicios?.nombre_proveedor || 'servicio'}`,
+      origen: 'MANUAL',
+      usuario_id: usuarioId
+    });
+  }
+
+  return facturaActualizada;
+}
+
+/**
+ * Actualiza los datos completos de una factura.
+ */
+export async function editarFactura(
+  facturaId: string,
+  data: EditarFacturaData,
+  usuarioId: string
+): Promise<Factura> {
+  const supabase = await createClient();
+
+  const { data: factura } = await supabase
+    .from('factura_servicios')
+    .select('*, servicios(usuario_id)')
+    .eq('id', facturaId)
+    .single();
+
+  if (!factura || factura.servicios?.usuario_id !== usuarioId) {
+    throw new Error('Factura no encontrada o no pertenece al usuario');
+  }
+
+  const payload: any = {};
+  if (data.monto !== undefined) payload.monto = data.monto;
+  if (data.kwConsumidos !== undefined) payload.kw_consumidos = data.kwConsumidos;
+  if (data.periodoDesde !== undefined) payload.periodo_desde = data.periodoDesde.toISOString();
+  if (data.periodoHasta !== undefined) payload.periodo_hasta = data.periodoHasta.toISOString();
+  if (data.fechaVencimiento !== undefined) payload.fecha_vencimiento = data.fechaVencimiento.toISOString();
+
+  const { data: facturaActualizada, error } = await supabase
+    .from('factura_servicios')
+    .update(payload)
     .eq('id', facturaId)
     .select()
     .single();

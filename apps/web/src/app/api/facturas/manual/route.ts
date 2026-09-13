@@ -10,8 +10,14 @@ export async function POST(request: Request) {
     }
     const usuarioId = user.id;
 
-    const data = await request.json();
-    const { servicioId, monto, fechaVencimiento, periodoDesde, periodoHasta, kwConsumidos } = data;
+    const formData = await request.formData();
+    const servicioId = formData.get('servicioId') as string;
+    const monto = formData.get('monto') as string;
+    const fechaVencimiento = formData.get('fechaVencimiento') as string;
+    const periodoDesde = formData.get('periodoDesde') as string;
+    const periodoHasta = formData.get('periodoHasta') as string;
+    const kwConsumidos = formData.get('kwConsumidos') as string;
+    const file = formData.get('file') as File | null;
 
     if (!servicioId || !monto || !fechaVencimiento) {
       return NextResponse.json({ error: 'Faltan datos obligatorios (servicioId, monto, fechaVencimiento)' }, { status: 400 });
@@ -28,6 +34,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Servicio no encontrado' }, { status: 404 });
     }
 
+    let archivoUrl = null;
+    if (file) {
+      const { writeFile, mkdir } = await import('fs/promises');
+      const path = await import('path');
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const uploadsDir = path.default.join(process.cwd(), 'public', 'uploads', 'facturas');
+      await mkdir(uploadsDir, { recursive: true });
+      const ext = file.type.split('/')[1] === 'jpeg' ? 'jpg' : file.type.split('/')[1] || 'pdf';
+      const fileName = `factura_manual_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+      const filePath = path.default.join(uploadsDir, fileName);
+      await writeFile(filePath, buffer);
+      archivoUrl = `/uploads/facturas/${fileName}`;
+    }
+
     const { data: factura, error: facturaError } = await supabase
       .from('factura_servicios')
       .insert({
@@ -42,6 +62,7 @@ export async function POST(request: Request) {
           : new Date().toISOString(),
         kw_consumidos: kwConsumidos ? parseFloat(kwConsumidos) : null,
         estado: 'PENDIENTE',
+        archivo_url: archivoUrl,
       })
       .select()
       .single();
