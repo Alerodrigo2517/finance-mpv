@@ -117,16 +117,28 @@ export async function POST(request: Request) {
       servicio = newServicio;
     }
 
-    // Guardar archivo físicamente
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'facturas');
-    await mkdir(uploadsDir, { recursive: true });
-    
     // Extraer extensión del file.type o usar .pdf por defecto
     const ext = file.type.split('/')[1] === 'jpeg' ? 'jpg' : file.type.split('/')[1] || 'pdf';
     const fileName = `factura_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
-    const filePath = path.join(uploadsDir, fileName);
-    await writeFile(filePath, buffer);
-    const archivoUrl = `/uploads/facturas/${fileName}`;
+    
+    // Subir a Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('facturas')
+      .upload(fileName, buffer, {
+        contentType: file.type,
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Error al subir a storage:', uploadError);
+      throw new Error('Error al subir el archivo al servidor');
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('facturas')
+      .getPublicUrl(fileName);
+
+    const archivoUrl = publicUrlData.publicUrl;
 
     if (servicio) {
       const { data: factura, error: facturaError } = await supabase

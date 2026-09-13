@@ -54,16 +54,27 @@ export async function POST(request: Request) {
 
     let archivoUrl = null;
     if (file) {
-      const { writeFile, mkdir } = await import('fs/promises');
-      const path = await import('path');
       const buffer = Buffer.from(await file.arrayBuffer());
-      const uploadsDir = path.default.join(process.cwd(), 'public', 'uploads', 'facturas');
-      await mkdir(uploadsDir, { recursive: true });
       const ext = file.type.split('/')[1] === 'jpeg' ? 'jpg' : file.type.split('/')[1] || 'pdf';
       const fileName = `factura_manual_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
-      const filePath = path.default.join(uploadsDir, fileName);
-      await writeFile(filePath, buffer);
-      archivoUrl = `/uploads/facturas/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('facturas')
+        .upload(fileName, buffer, {
+          contentType: file.type,
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error('Error subiendo factura manual a storage:', uploadError);
+        throw new Error('Error al guardar la factura en el servidor');
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('facturas')
+        .getPublicUrl(fileName);
+
+      archivoUrl = publicUrlData.publicUrl;
     }
 
     const { data: factura, error: facturaError } = await supabase
