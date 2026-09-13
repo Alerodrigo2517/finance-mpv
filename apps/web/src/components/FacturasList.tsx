@@ -8,7 +8,7 @@ interface FacturasListProps {
   facturas: Factura[];
   nombreProveedor: string;
   onDeleteFactura: (id: string) => void;
-  onPayFactura?: (id: string) => Promise<void>;
+  onPayFactura?: (id: string, metodoPago?: string) => Promise<void>;
   onEditFactura?: (factura: Factura) => void;
 }
 
