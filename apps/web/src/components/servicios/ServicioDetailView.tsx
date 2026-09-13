@@ -37,7 +37,7 @@ export default function ServicioDetailView({
 
   const filteredFacturas = sortedFacturas.filter(f => {
     if (metodoPagoFilter === 'TODOS') return true;
-    const m = f.metodoPago || (f as any).metodo_pago;
+    const m = f.metodoPago || f.metodo_pago;
     if (metodoPagoFilter === 'SIN REGISTRO') {
        return f.estado === 'PAGADA' && !m;
     }
@@ -143,7 +143,7 @@ export default function ServicioDetailView({
       {/* List of Facturas for Detail */}
       <FacturasList 
         facturas={filteredFacturas} 
-        nombreProveedor={selectedServicio.nombreProveedor || (selectedServicio as any).nombre_proveedor || ''} 
+        nombreProveedor={selectedServicio.nombreProveedor || selectedServicio.nombre_proveedor || ''} 
         onDeleteFactura={handleDeleteFactura} 
         onPayFactura={handlePayFactura}
         onEditFactura={handleEditFacturaClick}

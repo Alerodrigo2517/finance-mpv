@@ -84,9 +84,9 @@ export default function FacturasList({ facturas, nombreProveedor, onDeleteFactur
           <div className="text-center py-8 text-slate-400 text-sm">No hay facturas cargadas.</div>
         ) : (
           facturas.map((f) => {
-            const pDesde = f.periodoDesde || (f as any).periodo_desde;
-            const fVenc = f.fechaVencimiento || (f as any).fecha_vencimiento;
-            const fechaBase = pDesde ? new Date(pDesde) : new Date(fVenc || (f as any).created_at || new Date().toISOString());
+            const pDesde = f.periodoDesde || f.periodo_desde;
+            const fVenc = f.fechaVencimiento || f.fecha_vencimiento;
+            const fechaBase = pDesde ? new Date(pDesde) : new Date(fVenc || f.created_at || new Date().toISOString());
             let mesCapitalizado = '';
             if (!isNaN(fechaBase.getTime())) {
               const mesNombre = fechaBase.toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -97,17 +97,17 @@ export default function FacturasList({ facturas, nombreProveedor, onDeleteFactur
             return (
               <div key={f.id} className="bg-white border-2 border-slate-200 rounded-2xl p-5 hover:border-slate-300 transition-colors shadow-sm relative group flex flex-col gap-3">
                 
-                <div className="flex justify-between items-center">
-                  <div className="flex flex-col">
-                    {mesCapitalizado && <span className="font-black text-[#0F3160] text-xl capitalize tracking-tight">{mesCapitalizado}</span>}
-                    <span className="font-medium text-slate-400 text-sm tracking-wide">{nombreProveedor}</span>
+                <div className="flex flex-wrap sm:flex-nowrap justify-between items-start sm:items-center gap-3">
+                  <div className="flex flex-col min-w-0">
+                    {mesCapitalizado && <span className="font-black text-[#0F3160] text-xl capitalize tracking-tight truncate">{mesCapitalizado}</span>}
+                    <span className="font-medium text-slate-400 text-sm tracking-wide truncate">{nombreProveedor}</span>
                   </div>
                   
-                  <div className="flex flex-col items-end gap-1.5">
+                  <div className="flex flex-col items-start sm:items-end gap-1.5 shrink-0">
                     <span className="font-black text-slate-800 text-xl">
                       ${Number(f.monto).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </span>
-                    <div className="flex gap-2 items-center">
+                    <div className="flex flex-wrap gap-2 items-center">
                       {esPendiente ? (
                         <div className="px-2.5 py-1 bg-red-50 text-red-600 border border-red-200 rounded-lg text-[10px] font-bold uppercase">Pendiente</div>
                       ) : (
@@ -141,8 +141,8 @@ export default function FacturasList({ facturas, nombreProveedor, onDeleteFactur
                 {/* Quick Actions overlay when hover */}
                 <div className="mt-4 pt-4 border-t border-slate-100 flex gap-4 justify-start flex-wrap">
                   {(() => {
-                    const url = f.archivoUrl || (f as any).archivo_url;
-                    const comprobanteUrl = f.comprobanteUrl || (f as any).comprobante_url;
+                    const url = f.archivoUrl || f.archivo_url;
+                    const comprobanteUrl = f.comprobanteUrl || f.comprobante_url;
                     
                     return (
                       <>

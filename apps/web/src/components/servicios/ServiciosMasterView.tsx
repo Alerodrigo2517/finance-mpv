@@ -73,7 +73,7 @@ export default function ServiciosMasterView({
         ) : (
           <>
             {servicios.map(s => {
-              const fs = s.facturas ? [...s.facturas].sort((a,b)=> new Date(b.fechaVencimiento || (b as any).fecha_vencimiento || '').getTime() - new Date(a.fechaVencimiento || (a as any).fecha_vencimiento || '').getTime()) : [];
+              const fs = s.facturas ? [...s.facturas].sort((a,b)=> new Date(b.fechaVencimiento || b.fecha_vencimiento || '').getTime() - new Date(a.fechaVencimiento || a.fecha_vencimiento || '').getTime()) : [];
               const ultimaFactura = fs[0];
               const isSelected = selectedServicioId === s.id;
 
@@ -88,7 +88,7 @@ export default function ServiciosMasterView({
                       <Receipt className="w-6 h-6" />
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-bold text-slate-800 text-lg tracking-wide capitalize">{(s.nombreProveedor || (s as any).nombre_proveedor || '').toLowerCase()}</span>
+                      <span className="font-bold text-slate-800 text-lg tracking-wide capitalize">{(s.nombreProveedor || s.nombre_proveedor || '').toLowerCase()}</span>
                       {s.facturas && s.facturas.length > 0 && (
                         <span className={`text-[10px] font-bold uppercase tracking-wider ${s.facturas.some(f => f.estado === 'PENDIENTE') ? 'text-red-500' : 'text-emerald-500'}`}>
                           {s.facturas.some(f => f.estado === 'PENDIENTE') ? 'Con deuda' : 'Al día'}

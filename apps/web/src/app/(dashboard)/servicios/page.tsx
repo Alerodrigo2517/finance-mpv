@@ -188,7 +188,7 @@ export default function ServiciosPage() {
   servicios.forEach(s => {
     if (s.facturas) {
       s.facturas.forEach(f => {
-        const dStr = f.fechaVencimiento || (f as any).fecha_vencimiento || '';
+        const dStr = f.fechaVencimiento || f.fecha_vencimiento || '';
         const fMonth = dStr ? parseInt(dStr.split('T')[0].split('-')[1], 10) - 1 : -1;
         const fYear = dStr ? parseInt(dStr.split('T')[0].split('-')[0], 10) : -1;
         
@@ -214,7 +214,7 @@ export default function ServiciosPage() {
 
   if (selectedServicio?.facturas) {
     selectedServicio.facturas.forEach(f => {
-      const dStr = f.fechaVencimiento || (f as any).fecha_vencimiento || '';
+      const dStr = f.fechaVencimiento || f.fecha_vencimiento || '';
       const fYear = dStr ? parseInt(dStr.split('T')[0].split('-')[0], 10) : -1;
       
       if (fYear === selectedYear) {
@@ -223,8 +223,8 @@ export default function ServiciosPage() {
       if (f.estado === 'PENDIENTE') {
         pendientePagoServicio += Number(f.monto);
       }
-      if (fYear === selectedYear && (f.kwConsumidos || (f as any).kw_consumidos)) {
-        consumosAnuales.push(Number(f.kwConsumidos || (f as any).kw_consumidos));
+      if (fYear === selectedYear && (f.kwConsumidos || f.kw_consumidos)) {
+        consumosAnuales.push(Number(f.kwConsumidos || f.kw_consumidos));
       }
     });
   }
@@ -232,16 +232,16 @@ export default function ServiciosPage() {
   const sortedFacturas = selectedServicio?.facturas ? 
     [...selectedServicio.facturas]
       .filter(f => {
-        const dStr = f.fechaVencimiento || (f as any).fecha_vencimiento || '';
+        const dStr = f.fechaVencimiento || f.fecha_vencimiento || '';
         const fYear = dStr ? parseInt(dStr.split('T')[0].split('-')[0], 10) : -1;
         return fYear === selectedYear;
       })
-      .sort((a,b)=> new Date(b.fechaVencimiento || (b as any).fecha_vencimiento || '').getTime() - new Date(a.fechaVencimiento || (a as any).fecha_vencimiento || '').getTime()) 
+      .sort((a,b)=> new Date(b.fechaVencimiento || b.fecha_vencimiento || '').getTime() - new Date(a.fechaVencimiento || a.fecha_vencimiento || '').getTime()) 
     : [];
 
   const availableYears = Array.from(new Set(
     (selectedServicio?.facturas || []).map(f => {
-      const dStr = f.fechaVencimiento || (f as any).fecha_vencimiento || '';
+      const dStr = f.fechaVencimiento || f.fecha_vencimiento || '';
       return dStr ? parseInt(dStr.split('T')[0].split('-')[0], 10) : new Date().getFullYear();
     })
   )).sort((a, b) => b - a);
@@ -262,7 +262,7 @@ export default function ServiciosPage() {
             </button>
           )}
           <h1 className="text-xl font-bold text-[#0F3160] uppercase tracking-wide">
-            {selectedServicioId ? (selectedServicio?.nombreProveedor || (selectedServicio as any)?.nombre_proveedor || 'Servicio') : 'Gestion de Servicios'}
+            {selectedServicioId ? (selectedServicio?.nombreProveedor || selectedServicio?.nombre_proveedor || 'Servicio') : 'Gestion de Servicios'}
           </h1>
         </div>
         <div className="flex gap-2 items-center">
