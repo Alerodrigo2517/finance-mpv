@@ -6,6 +6,8 @@ import BarcodeScanner from '@/components/BarcodeScanner';
 import FacturasList from '@/components/FacturasList';
 import { ConfirmDeleteDialog } from '@/components/ui/ConfirmDeleteDialog';
 import BlankState from '@/components/ui/BlankState';
+import ServiciosMasterView from '@/components/servicios/ServiciosMasterView';
+import ServicioDetailView from '@/components/servicios/ServicioDetailView';
 
 import { Servicio, Factura } from '@/types';
 
@@ -15,6 +17,7 @@ export default function ServiciosPage() {
 
   // Master-Detail State
   const [selectedServicioId, setSelectedServicioId] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [deleteTarget, setDeleteTarget] = useState<{type: 'servicio' | 'factura', id: string} | null>(null);
 
   // States for Modals/Forms
@@ -25,18 +28,7 @@ export default function ServiciosPage() {
   const [sMonto, setSMonto] = useState('');
   const [sVencimiento, setSVencimiento] = useState('');
 
-  // AI Upload State (Inside Detail view)
-  const [showUpload, setShowUpload] = useState(false);
-  const [uploadTab, setUploadTab] = useState<'manual' | 'archivo' | 'escaner'>('manual');
-  const [uploadStatus, setUploadStatus] = useState<{status: 'idle'|'loading'|'error'|'success', message: string}>({status: 'idle', message: ''});
-  const [uploadResult, setUploadResult] = useState<Partial<Factura> & { kwConsumidos?: number, fechaEmision?: string, proximaFechaVencimiento?: string } | null>(null);
-
-  // Manual Factura State
-  const [mF_Monto, setMF_Monto] = useState('');
-  const [mF_Vencimiento, setMF_Vencimiento] = useState('');
-  const [mF_Periodo, setMF_Periodo] = useState('');
-  const [mF_Consumo, setMF_Consumo] = useState('');
-  const [mF_File, setMF_File] = useState<File | null>(null);
+  // Modals and Forms states remain here...
 
   // Edit Factura State
   const [editingFactura, setEditingFactura] = useState<Factura | null>(null);
@@ -82,82 +74,7 @@ export default function ServiciosPage() {
     }
   };
 
-  const handleGuardarFacturaIA = async (servicioId: string) => {
-    if (!uploadResult) return;
-    try {
-      setUploadStatus({status: 'loading', message: 'Guardando datos...'});
-
-      const resFactura = await fetch('/api/facturas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          servicioId: servicioId,
-          monto: uploadResult.monto,
-          fechaVencimiento: uploadResult.fechaVencimiento,
-          periodoDesde: uploadResult.periodoDesde || uploadResult.fechaVencimiento,
-          periodoHasta: uploadResult.periodoHasta || uploadResult.fechaVencimiento,
-          fechaEmision: uploadResult.fechaEmision,
-          proximaFechaVencimiento: uploadResult.proximaFechaVencimiento,
-          kwConsumidos: uploadResult.kwConsumidos,
-          archivoUrl: uploadResult.archivoUrl
-        })
-      });
-
-      if (resFactura.ok) {
-        setUploadResult(null);
-        setShowUpload(false);
-        setUploadStatus({status: 'success', message: 'Guardado con éxito'});
-        setTimeout(() => setUploadStatus({status: 'idle', message: ''}), 2000);
-        fetchData();
-      } else {
-        throw new Error("No se pudo guardar la factura");
-      }
-    } catch (e) {
-      setUploadStatus({status: 'error', message: 'Ocurrió un error al guardar los datos.'});
-    }
-  };
-
-  const handleGuardarManual = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedServicioId) return;
-    try {
-      setUploadStatus({status: 'loading', message: 'Guardando factura...'});
-      const formData = new FormData();
-      formData.append('servicioId', selectedServicioId);
-      formData.append('monto', mF_Monto);
-      formData.append('fechaVencimiento', mF_Vencimiento);
-      if (mF_Periodo) {
-        formData.append('periodoDesde', mF_Periodo);
-        formData.append('periodoHasta', mF_Periodo);
-      }
-      if (mF_Consumo) formData.append('kwConsumidos', mF_Consumo);
-      if (mF_File) formData.append('file', mF_File);
-
-      const res = await fetch('/api/facturas/manual', {
-        method: 'POST',
-        body: formData
-      });
-      if (res.ok) {
-        setUploadStatus({status: 'success', message: 'Guardado con éxito'});
-        setMF_Monto(''); setMF_Vencimiento(''); setMF_Periodo(''); setMF_Consumo(''); setMF_File(null);
-        setTimeout(() => {
-          setUploadStatus({status: 'idle', message: ''});
-          setShowUpload(false);
-        }, 2000);
-        fetchData();
-      } else {
-        throw new Error();
-      }
-    } catch(e) {
-      setUploadStatus({status: 'error', message: 'Error al guardar factura manual.'});
-    }
-  };
-
-  const handleScanSuccess = (decodedText: string) => {
-    // Por ahora prellenamos el formulario manual y pasamos a esa tab
-    alert('Código leído correctamente. Continúa con la carga manual.');
-    setUploadTab('manual');
-  };
+  // Upload handlers moved to UploadFacturaForm.tsx
 
   const handleDeleteServicio = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -254,29 +171,7 @@ export default function ServiciosPage() {
     }
   };
 
-  const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    setUploadStatus({status: 'loading', message: 'Analizando con IA y guardando...'});
-    const formData = new FormData();
-    formData.append('file', e.target.files[0]);
-    try {
-      const res = await fetch('/api/facturas/upload', {
-        method: 'POST',
-        body: formData
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUploadResult(data.parsedData);
-        setUploadStatus({status: 'idle', message: ''});
-      } else {
-        setUploadStatus({status: 'error', message: 'Error al procesar. Reintenta.'});
-      }
-    } catch (err) {
-      setUploadStatus({status: 'error', message: 'Error de red.'});
-    } finally {
-      e.target.value = '';
-    }
-  };
+  // handleUploadFile moved to UploadFacturaForm.tsx
 
   // Calculations for Master View
   const currentMonth = new Date().getMonth();
@@ -317,19 +212,38 @@ export default function ServiciosPage() {
       const dStr = f.fechaVencimiento || (f as any).fecha_vencimiento || '';
       const fYear = dStr ? parseInt(dStr.split('T')[0].split('-')[0], 10) : -1;
       
-      if (fYear === currentYear) {
+      if (fYear === selectedYear) {
         gastoAnoServicio += Number(f.monto);
       }
       if (f.estado === 'PENDIENTE') {
         pendientePagoServicio += Number(f.monto);
       }
-      if (fYear === currentYear && (f.kwConsumidos || (f as any).kw_consumidos)) {
+      if (fYear === selectedYear && (f.kwConsumidos || (f as any).kw_consumidos)) {
         consumosAnuales.push(Number(f.kwConsumidos || (f as any).kw_consumidos));
       }
     });
   }
   
-  const sortedFacturas = selectedServicio?.facturas ? [...selectedServicio.facturas].sort((a,b)=> new Date(b.fechaVencimiento || (b as any).fecha_vencimiento || '').getTime() - new Date(a.fechaVencimiento || (a as any).fecha_vencimiento || '').getTime()) : [];
+  const sortedFacturas = selectedServicio?.facturas ? 
+    [...selectedServicio.facturas]
+      .filter(f => {
+        const dStr = f.fechaVencimiento || (f as any).fecha_vencimiento || '';
+        const fYear = dStr ? parseInt(dStr.split('T')[0].split('-')[0], 10) : -1;
+        return fYear === selectedYear;
+      })
+      .sort((a,b)=> new Date(b.fechaVencimiento || (b as any).fecha_vencimiento || '').getTime() - new Date(a.fechaVencimiento || (a as any).fecha_vencimiento || '').getTime()) 
+    : [];
+
+  const availableYears = Array.from(new Set(
+    (selectedServicio?.facturas || []).map(f => {
+      const dStr = f.fechaVencimiento || (f as any).fecha_vencimiento || '';
+      return dStr ? parseInt(dStr.split('T')[0].split('-')[0], 10) : new Date().getFullYear();
+    })
+  )).sort((a, b) => b - a);
+  if (!availableYears.includes(new Date().getFullYear())) {
+    availableYears.push(new Date().getFullYear());
+    availableYears.sort((a, b) => b - a);
+  }
 
   return (
     <div className="min-h-[calc(100vh-100px)] font-sans flex flex-col -m-4 sm:-m-8 p-4 sm:p-8">
@@ -369,364 +283,34 @@ export default function ServiciosPage() {
           
           {/* VISTA PRINCIPAL (Lista de Servicios) */}
           {!selectedServicioId ? (
-            <div className="flex flex-col gap-6 w-full animate-in fade-in zoom-in-95 duration-200">
-            
-            {/* Top Summaries Left */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-              <div className="glass-panel p-5 md:p-6 flex flex-col gap-1 md:gap-2 relative overflow-hidden group">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
-                <span className="text-slate-500 font-medium text-sm">Facturado este mes</span>
-                <span className="text-3xl md:text-4xl font-bold text-slate-800">
-                  ${facturadoMesTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-              <div className="glass-panel p-5 md:p-6 flex flex-col gap-1 md:gap-2 relative overflow-hidden group">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all"></div>
-                <span className="text-slate-500 font-medium text-sm">Ya pagado este mes</span>
-                <span className="text-3xl md:text-4xl font-bold text-emerald-600">
-                  ${pagadoMesTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-              <div className="glass-panel p-5 md:p-6 flex flex-col gap-1 md:gap-2 relative overflow-hidden group">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-danger/10 rounded-full blur-2xl group-hover:bg-danger/20 transition-all"></div>
-                <span className="text-slate-500 font-medium text-sm">Pendiente de pago</span>
-                <span className="text-3xl md:text-4xl font-bold text-danger">
-                  ${pendientePagoTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-            </div>
-
-            {/* List of Services */}
-            <div className="flex flex-col gap-4 mt-2 max-h-[340px] overflow-y-auto pr-2 pb-2">
-              {servicios.length === 0 ? (
-                <div className="bg-white rounded-3xl p-2 border border-slate-100 shadow-sm">
-                  <BlankState 
-                    variant="not-found" 
-                    Icon={Receipt} 
-                    title="Sin servicios" 
-                    description="Comienza agregando los servicios que pagas mensualmente (luz, gas, internet, etc)."
-                    action={
-                      <button 
-                        onClick={() => setShowServicioForm(true)}
-                        className="w-full sm:w-auto bg-[#0F3160] hover:bg-[#0a244a] text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 flex justify-center items-center gap-2 mt-2 shadow-md hover:scale-105"
-                      >
-                        <Plus className="w-5 h-5 stroke-[3]" /> 
-                        <span>Agregar Nuevo Servicio</span>
-                      </button>
-                    }
-                  />
-                </div>
-              ) : (
-                <>
-                  {servicios.map(s => {
-                    const fs = s.facturas ? [...s.facturas].sort((a,b)=> new Date(b.fechaVencimiento || '').getTime() - new Date(a.fechaVencimiento || '').getTime()) : [];
-                    const ultimaFactura = fs[0];
-                    const isSelected = selectedServicioId === s.id;
-
-                    return (
-                      <div 
-                        key={s.id} 
-                        onClick={() => setSelectedServicioId(s.id)}
-                        className={`group bg-white border-2 rounded-2xl p-4 flex items-center justify-between cursor-pointer transition-all hover:shadow-md ${isSelected ? 'border-[#0F3160] ring-4 ring-blue-50' : 'border-slate-200 hover:border-slate-300'}`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className={`p-3 rounded-xl flex items-center justify-center transition-colors ${isSelected ? 'bg-[#0F3160] text-white' : 'bg-slate-100 text-[#0F3160] group-hover:bg-blue-50'}`}>
-                            <Receipt className="w-6 h-6" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-bold text-slate-800 text-lg tracking-wide capitalize">{(s.nombreProveedor || (s as any).nombre_proveedor || '').toLowerCase()}</span>
-                            {s.facturas && s.facturas.length > 0 && (
-                              <span className={`text-[10px] font-bold uppercase tracking-wider ${s.facturas.some(f => f.estado === 'PENDIENTE') ? 'text-red-500' : 'text-emerald-500'}`}>
-                                {s.facturas.some(f => f.estado === 'PENDIENTE') ? 'Con deuda' : 'Al día'}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {ultimaFactura && (
-                            <div className="flex flex-col items-end mr-2">
-                              <span className="text-[10px] text-slate-400 font-medium leading-none mb-1">Última fra.</span>
-                              <span className="font-bold text-slate-700 text-sm whitespace-nowrap leading-none">
-                                ${Number(ultimaFactura.monto).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                              </span>
-                            </div>
-                          )}
-                          <button 
-                            onClick={(e) => handleDeleteServicio(e, s.id)} 
-                            className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" 
-                            title="Eliminar servicio"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                          <div className={`transition-colors ${isSelected ? 'text-[#0F3160]' : 'text-slate-300'}`}>
-                            <ChevronRight className="w-6 h-6" />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                </>
-              )}
-            </div>
-          </div>
+            <ServiciosMasterView 
+              servicios={servicios}
+              facturadoMesTotal={facturadoMesTotal}
+              pagadoMesTotal={pagadoMesTotal}
+              pendientePagoTotal={pendientePagoTotal}
+              selectedServicioId={selectedServicioId}
+              setSelectedServicioId={setSelectedServicioId}
+              setShowServicioForm={setShowServicioForm}
+              handleDeleteServicio={handleDeleteServicio}
+            />
           ) : (
           /* VISTA DETALLE (Un solo servicio) */
-          <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-right-8 duration-300">
-                {/* Top Summaries Right */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                  <div className="glass-panel p-5 md:p-6 flex flex-col gap-1 md:gap-2 relative overflow-hidden group">
-                    <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
-                    <span className="text-slate-500 font-medium text-sm">Total Facturado (Año)</span>
-                    <span className="text-3xl md:text-4xl font-bold text-slate-800">
-                      ${gastoAnoServicio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  <div className="glass-panel p-5 md:p-6 flex flex-col gap-1 md:gap-2 relative overflow-hidden group">
-                    <div className="absolute -right-4 -top-4 w-24 h-24 bg-danger/10 rounded-full blur-2xl group-hover:bg-danger/20 transition-all"></div>
-                    <span className="text-slate-500 font-medium text-sm">Pendiente de pago</span>
-                    <span className="text-3xl md:text-4xl font-bold text-danger">
-                      ${pendientePagoServicio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Consumo Anual Bar */}
-                {consumosAnuales.length > 0 && (
-                  <div className="bg-white border-2 border-slate-200 rounded-2xl p-4 flex flex-col items-center shadow-sm">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Consumo anual ({consumosAnuales.reduce((a,b)=>a+b,0)} kW)</span>
-                    <div className="w-full flex h-8 gap-1 items-end">
-                      {consumosAnuales.slice(0, 12).map((val, idx) => {
-                        const max = Math.max(...consumosAnuales);
-                        const height = max > 0 ? (val / max) * 100 : 0;
-                        return (
-                          <div key={idx} className="flex-1 bg-blue-100 rounded-t-sm relative group" style={{ height: `${height}%` }}>
-                            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-0.5 px-1.5 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
-                              {val}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center mt-2 px-2">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Todas las facturas de {currentYear} ({selectedServicio?.nombreProveedor})
-                  </span>
-                  <button 
-                    onClick={() => setShowUpload(!showUpload)}
-                    className="text-[10px] font-bold bg-[#0F3160] text-white px-3 py-1.5 rounded-lg shadow-sm hover:bg-[#0a244a] transition-colors"
-                  >
-                    + Cargar factura
-                  </button>
-                </div>
-
-                {/* Upload Form */}
-                {showUpload && (
-                  <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 animate-in slide-in-from-top-2 flex flex-col items-center">
-                    <div className="w-full max-w-sm">
-                    {/* TABS */}
-                    <div className="flex bg-white rounded-lg p-1 border border-blue-200 mb-3 shadow-sm">
-                      <button onClick={() => setUploadTab('manual')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${uploadTab === 'manual' ? 'bg-[#0F3160] text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>Manual</button>
-                      <button onClick={() => setUploadTab('archivo')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${uploadTab === 'archivo' ? 'bg-[#0F3160] text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>Archivo</button>
-                      <button onClick={() => setUploadTab('escaner')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${uploadTab === 'escaner' ? 'bg-[#0F3160] text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}>Escáner</button>
-                    </div>
-
-                    {uploadTab === 'archivo' && (
-                      <div className="animate-in fade-in zoom-in-95 duration-200">
-                        {!uploadResult ? (
-                          <label className="w-full flex flex-col items-center justify-center py-6 border-2 border-dashed border-[#0F3160]/20 rounded-xl bg-white hover:bg-blue-50/50 cursor-pointer transition-colors relative overflow-hidden">
-                            <input 
-                              type="file" 
-                              accept="application/pdf,image/jpeg,image/png,image/webp"
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                              disabled={uploadStatus.status === 'loading'}
-                              onChange={handleUploadFile}
-                            />
-                            {uploadStatus.status === 'loading' ? (
-                              <div className="flex flex-col items-center gap-2">
-                                <Loader2 className="w-8 h-8 text-[#0F3160] animate-spin" />
-                                <span className="text-sm font-bold text-[#0F3160]">{uploadStatus.message}</span>
-                              </div>
-                            ) : uploadStatus.status === 'error' ? (
-                              <div className="flex flex-col items-center gap-2">
-                                <span className="text-sm font-bold text-red-600">❌ {uploadStatus.message}</span>
-                                <span className="text-xs text-slate-400">Toca para intentar de nuevo</span>
-                              </div>
-                            ) : (
-                              <div className="flex flex-col items-center gap-1 text-center px-4">
-                                <UploadCloud className="w-6 h-6 text-[#0F3160]/60" />
-                                <span className="text-xs font-bold text-[#0F3160]">Toca aquí para subir PDF o Imagen</span>
-                                <span className="text-[10px] text-slate-400">La IA extraerá automáticamente los datos</span>
-                              </div>
-                            )}
-                          </label>
-                        ) : (
-                          <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="font-bold text-slate-800 text-xs">Resumen detectado</span>
-                              <span className="text-base font-black text-slate-900">${uploadResult.monto}</span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-y-1 text-[10px] text-slate-500 mb-3">
-                               <div className="flex flex-col"><span>Vencimiento:</span><span className="font-bold text-slate-700">{uploadResult.fechaVencimiento}</span></div>
-                               {uploadResult.kwConsumidos && <div className="flex flex-col"><span>Consumo:</span><span className="font-bold text-slate-700">{uploadResult.kwConsumidos} kW</span></div>}
-                            </div>
-                            <button onClick={() => handleGuardarFacturaIA(selectedServicio?.id || '')} className="w-full bg-[#0F3160] hover:bg-[#0a244a] text-white text-xs font-bold py-2 rounded-lg transition-colors flex justify-center items-center gap-2">
-                              {uploadStatus.status === 'loading' && <Loader2 className="w-3 h-3 animate-spin" />}
-                              Confirmar y Guardar
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {uploadTab === 'escaner' && (
-                      <div className="animate-in fade-in zoom-in-95 duration-200">
-                        <BarcodeScanner onScanSuccess={handleScanSuccess} />
-                        <p className="text-[10px] text-center text-slate-500 mt-2">Apunta la cámara al código de barras de la factura física. (Si no tienes cámara, selecciona Manual).</p>
-                      </div>
-                    )}
-
-                    {uploadTab === 'manual' && (
-                      <div className="flex flex-col items-center">
-                        <form onSubmit={handleGuardarManual} className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 w-full p-1">
-                          
-                          {/* Monto Field */}
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Monto a pagar <span className="text-red-500">*</span></label>
-                            <div className="relative group">
-                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <DollarSign className="h-5 w-5 text-slate-400 group-focus-within:text-[#0F3160] transition-colors" />
-                              </div>
-                              <input type="number" step="0.01" placeholder="0.00" value={mF_Monto} onChange={(e) => setMF_Monto(e.target.value)} required className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-[#0F3160]/30 focus:bg-white transition-all shadow-sm" />
-                            </div>
-                          </div>
-                          
-                          {/* Fecha Vencimiento Field */}
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Fecha de Vencimiento <span className="text-red-500">*</span></label>
-                            <div className="relative group">
-                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Calendar className="h-4 w-4 text-slate-400 group-focus-within:text-[#0F3160] transition-colors" />
-                              </div>
-                              <input type="date" value={mF_Vencimiento} onChange={(e) => setMF_Vencimiento(e.target.value)} required className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-[#0F3160]/30 focus:bg-white transition-all shadow-sm appearance-none" />
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-4">
-                            {/* Período Field */}
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Período <span className="text-slate-400 font-normal capitalize">(Opc.)</span></label>
-                              <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                  <Calendar className="h-4 w-4 text-slate-400 group-focus-within:text-[#0F3160] transition-colors" />
-                                </div>
-                                <input type="month" value={mF_Periodo} onChange={(e) => setMF_Periodo(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl pl-10 pr-3 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-[#0F3160]/30 focus:bg-white transition-all shadow-sm appearance-none" />
-                              </div>
-                            </div>
-
-                            {/* Consumo Field */}
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Consumo <span className="text-slate-400 font-normal capitalize">(Opc.)</span></label>
-                              <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                  <Zap className="h-4 w-4 text-slate-400 group-focus-within:text-[#0F3160] transition-colors" />
-                                </div>
-                                <input type="number" step="0.01" placeholder="Ej. 120" value={mF_Consumo} onChange={(e) => setMF_Consumo(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl pl-10 pr-3 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-[#0F3160]/30 focus:bg-white transition-all shadow-sm" />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Archivo Field */}
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest pl-1">Archivo adjunto <span className="text-slate-400 font-normal capitalize">(Opc.)</span></label>
-                            <div className="relative">
-                              <input type="file" id="file-upload" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={(e) => setMF_File(e.target.files?.[0] || null)} className="peer absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                              <div className="w-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-4 flex items-center gap-3 peer-focus:border-[#0F3160]/40 peer-focus:bg-[#0F3160]/5 transition-all group hover:bg-slate-100">
-                                <div className="w-10 h-10 rounded-full bg-white shadow-sm border border-slate-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                  <ImageIcon className="h-4 w-4 text-[#0F3160]" />
-                                </div>
-                                <div className="flex flex-col overflow-hidden">
-                                  <span className="text-sm font-bold text-slate-700 truncate">{mF_File ? mF_File.name : 'Seleccionar PDF o Foto'}</span>
-                                  <span className="text-[10px] text-slate-400">{mF_File ? 'Archivo seleccionado' : 'Toca para explorar'}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <button type="submit" disabled={uploadStatus.status === 'loading'} className="w-full bg-gradient-to-r from-[#0F3160] to-[#1a4a8f] hover:from-[#0a244a] hover:to-[#0F3160] text-white text-sm font-bold py-3.5 rounded-xl shadow-lg shadow-[#0F3160]/20 mt-2 transition-all flex justify-center items-center gap-2 transform active:scale-[0.98]">
-                            {uploadStatus.status === 'loading' ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Guardar Factura'}
-                          </button>
-                          
-                          {uploadStatus.status === 'success' && <div className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-lg text-xs font-bold text-center mt-1 border border-emerald-100 animate-in fade-in slide-in-from-bottom-2">¡Guardado con éxito!</div>}
-                          {uploadStatus.status === 'error' && <div className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-xs font-bold text-center mt-1 border border-red-100 animate-in fade-in slide-in-from-bottom-2">{uploadStatus.message}</div>}
-                        </form>
-                      </div>
-                    )}
-                    </div>
-                  </div>
-                )}
-
-                {/* List of Facturas for Detail */}
-                <FacturasList 
-                  facturas={sortedFacturas} 
-                  nombreProveedor={selectedServicio?.nombreProveedor || ''} 
-                  onDeleteFactura={handleDeleteFactura} 
-                  onPayFactura={handlePayFactura}
-                  onEditFactura={handleEditFacturaClick}
-                />
-
-      {/* Edit Factura Modal */}
-      {editingFactura && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4">
-            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-slate-800">Editar Factura</h3>
-              <button onClick={() => setEditingFactura(null)} className="p-1 hover:bg-slate-200 rounded-full text-slate-500 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-5">
-              <form onSubmit={handleEditFacturaSubmit} className="flex flex-col gap-3 w-full">
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Monto a pagar <span className="text-red-500">*</span></label>
-                  <input type="number" step="0.01" value={eF_Monto} onChange={(e) => setEF_Monto(e.target.value)} required className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 shadow-sm" />
-                </div>
-                
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Fecha de Vencimiento <span className="text-red-500">*</span></label>
-                  <input type="date" value={eF_Vencimiento} onChange={(e) => setEF_Vencimiento(e.target.value)} required className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 shadow-sm" />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Período / Mes</label>
-                    <input type="month" value={eF_Periodo} onChange={(e) => setEF_Periodo(e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 shadow-sm" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Consumo</label>
-                    <input type="number" step="0.01" value={eF_Consumo} onChange={(e) => setEF_Consumo(e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 shadow-sm" />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 mt-2">
-                  <button type="button" onClick={() => setEditingFactura(null)} className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-                    Cancelar
-                  </button>
-                  <button type="submit" disabled={editStatus.status === 'loading'} className="bg-[#0F3160] hover:bg-[#0a244a] text-white text-xs font-bold py-2 px-4 rounded-lg shadow-md transition-colors flex items-center gap-2">
-                    {editStatus.status === 'loading' ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Guardar'}
-                  </button>
-                </div>
-                {editStatus.status === 'success' && <p className="text-emerald-600 text-xs font-bold text-center mt-1">¡Actualizado!</p>}
-                {editStatus.status === 'error' && <p className="text-red-600 text-xs font-bold text-center mt-1">{editStatus.message}</p>}
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-              </div>
+            selectedServicio ? (
+              <ServicioDetailView 
+                selectedServicio={selectedServicio as Servicio}
+                selectedYear={selectedYear}
+                setSelectedYear={setSelectedYear}
+                gastoAnoServicio={gastoAnoServicio}
+                pendientePagoServicio={pendientePagoServicio}
+                consumosAnuales={consumosAnuales}
+                availableYears={availableYears}
+                sortedFacturas={sortedFacturas as Factura[]}
+                handleDeleteFactura={handleDeleteFactura}
+                handlePayFactura={handlePayFactura}
+                handleEditFacturaClick={handleEditFacturaClick}
+                fetchData={fetchData}
+              />
+            ) : null
           )}
 
         </div>

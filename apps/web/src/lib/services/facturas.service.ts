@@ -17,13 +17,7 @@ export type EditarFacturaData = {
   kwConsumidos?: number;
 };
 
-export type EditarFacturaData = {
-  periodoDesde?: Date;
-  periodoHasta?: Date;
-  fechaVencimiento?: Date;
-  monto?: number;
-  kwConsumidos?: number;
-};
+
 
 /**
  * Crea una nueva factura para un servicio.

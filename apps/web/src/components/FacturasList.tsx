@@ -14,6 +14,7 @@ interface FacturasListProps {
 
 export default function FacturasList({ facturas, nombreProveedor, onDeleteFactura, onPayFactura, onEditFactura }: FacturasListProps) {
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [missingFileId, setMissingFileId] = useState<string | null>(null);
 
   const handlePay = async (id: string) => {
     if (!onPayFactura) return;
@@ -86,27 +87,58 @@ export default function FacturasList({ facturas, nombreProveedor, onDeleteFactur
               </div>
 
               {/* Quick Actions overlay when hover */}
-              {(f.archivoUrl || (f as any).archivo_url) && (() => {
-                const url = f.archivoUrl || (f as any).archivo_url;
-                return (
-                <div className="mt-4 pt-4 border-t border-slate-100 flex gap-4 justify-start">
-                  <a 
-                    href={url} 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 text-xs font-bold text-[#0F3160] hover:text-blue-700 transition-colors bg-blue-50 px-3 py-1.5 rounded-lg"
-                  >
-                    <ExternalLink className="w-4 h-4" /> Ver factura
-                  </a>
-                  <a 
-                    href={url} 
-                    download 
-                    className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-800 transition-colors bg-slate-100 px-3 py-1.5 rounded-lg"
-                  >
-                    <Download className="w-4 h-4" /> Descargar
-                  </a>
-                </div>
-              )})()}
+              <div className="mt-4 pt-4 border-t border-slate-100 flex gap-4 justify-start">
+                {(() => {
+                  const url = f.archivoUrl || (f as any).archivo_url;
+                  
+                  if (missingFileId === f.id) {
+                    return (
+                      <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg flex items-center gap-1.5 animate-in fade-in zoom-in duration-200 border border-amber-200 shadow-sm">
+                        No hay archivo adjunto cargado
+                      </span>
+                    );
+                  }
+
+                  if (url) {
+                    return (
+                      <>
+                        <a 
+                          href={url} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="flex items-center gap-1.5 text-xs font-bold text-[#0F3160] hover:text-blue-700 transition-colors bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg"
+                        >
+                          <ExternalLink className="w-4 h-4" /> Ver factura
+                        </a>
+                        <a 
+                          href={url} 
+                          download 
+                          className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-800 transition-colors bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg"
+                        >
+                          <Download className="w-4 h-4" /> Descargar
+                        </a>
+                      </>
+                    );
+                  } else {
+                    return (
+                      <>
+                        <button 
+                          onClick={() => { setMissingFileId(f.id); setTimeout(() => setMissingFileId(null), 3000); }}
+                          className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-amber-700 transition-colors bg-slate-50 hover:bg-amber-50 px-3 py-1.5 rounded-lg"
+                        >
+                          <ExternalLink className="w-4 h-4" /> Ver factura
+                        </button>
+                        <button 
+                          onClick={() => { setMissingFileId(f.id); setTimeout(() => setMissingFileId(null), 3000); }}
+                          className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-amber-700 transition-colors bg-slate-50 hover:bg-amber-50 px-3 py-1.5 rounded-lg"
+                        >
+                          <Download className="w-4 h-4" /> Descargar
+                        </button>
+                      </>
+                    );
+                  }
+                })()}
+              </div>
             </div>
           );
         })

@@ -40,7 +40,8 @@ export default async function Home() {
     else if (m.tipo === 'EGRESO') saldo -= m.monto;
 
     // Ingresos y egresos específicamente de este mes
-    const [yearStr, monthStr] = m.fecha.split('T')[0].split('-');
+    const fechaStr = typeof m.fecha === 'string' ? m.fecha : (m.fecha as Date).toISOString();
+    const [yearStr, monthStr] = fechaStr.split('T')[0].split('-');
     const mYear = parseInt(yearStr, 10);
     const mMonth = parseInt(monthStr, 10) - 1; // 0-indexed for JS compatibility
 

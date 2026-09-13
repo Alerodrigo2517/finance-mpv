@@ -1,5 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { z } from 'zod';
+
+const formSchema = z.object({
+  servicioId: z.string().uuid("El servicioId debe ser un UUID válido"),
+  monto: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "El monto debe ser un número positivo"),
+  fechaVencimiento: z.string().min(1, "La fecha de vencimiento es obligatoria"),
+  periodoDesde: z.string().optional().nullable(),
+  periodoHasta: z.string().optional().nullable(),
+  kwConsumidos: z.string().optional().nullable().refine((val) => !val || !isNaN(parseFloat(val)), "El consumo debe ser un número válido"),
+});
 
 export async function POST(request: Request) {
   try {
@@ -11,17 +21,25 @@ export async function POST(request: Request) {
     const usuarioId = user.id;
 
     const formData = await request.formData();
-    const servicioId = formData.get('servicioId') as string;
-    const monto = formData.get('monto') as string;
-    const fechaVencimiento = formData.get('fechaVencimiento') as string;
-    const periodoDesde = formData.get('periodoDesde') as string;
-    const periodoHasta = formData.get('periodoHasta') as string;
-    const kwConsumidos = formData.get('kwConsumidos') as string;
-    const file = formData.get('file') as File | null;
+    
+    // Parse form data into a simple object for Zod validation
+    const formDataObj = {
+      servicioId: formData.get('servicioId') as string,
+      monto: formData.get('monto') as string,
+      fechaVencimiento: formData.get('fechaVencimiento') as string,
+      periodoDesde: formData.get('periodoDesde') as string | null,
+      periodoHasta: formData.get('periodoHasta') as string | null,
+      kwConsumidos: formData.get('kwConsumidos') as string | null,
+    };
 
-    if (!servicioId || !monto || !fechaVencimiento) {
-      return NextResponse.json({ error: 'Faltan datos obligatorios (servicioId, monto, fechaVencimiento)' }, { status: 400 });
+    const validationResult = formSchema.safeParse(formDataObj);
+    if (!validationResult.success) {
+      const errorMsg = validationResult.error.issues.map((e: any) => e.message).join(', ');
+      return NextResponse.json({ error: `Error de validación: ${errorMsg}` }, { status: 400 });
     }
+
+    const { servicioId, monto, fechaVencimiento, periodoDesde, periodoHasta, kwConsumidos } = validationResult.data;
+    const file = formData.get('file') as File | null;
 
     const { data: servicio } = await supabase
       .from('servicios')
