@@ -131,7 +131,7 @@ export async function POST(request: Request) {
 
     if (uploadError) {
       console.error('Error al subir a storage:', uploadError);
-      throw new Error('Error al subir el archivo al servidor');
+      throw new Error(`Error en storage: ${uploadError.message}`);
     }
 
     const { data: publicUrlData } = supabase.storage

@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 
       if (uploadError) {
         console.error('Error subiendo factura manual a storage:', uploadError);
-        throw new Error('Error al guardar la factura en el servidor');
+        throw new Error(`Error en storage: ${uploadError.message}`);
       }
 
       const { data: publicUrlData } = supabase.storage

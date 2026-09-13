@@ -44,7 +44,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
       if (uploadError) {
         console.error('Error subiendo comprobante a storage:', uploadError);
-        throw new Error('Error al guardar el comprobante en el servidor');
+        throw new Error(`Error en storage: ${uploadError.message}`);
       }
 
       const { data: publicUrlData } = supabase.storage
