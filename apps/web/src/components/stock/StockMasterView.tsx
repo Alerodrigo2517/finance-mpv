@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Producto } from '@/types';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { Plus, Search, Package, ScanLine, Trash2, ListChecks, X, ShoppingCart } from 'lucide-react';
@@ -21,6 +21,26 @@ export default function StockMasterView({ productos, selectedId, onSelect, onSca
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'ALACENA' | 'CATALOGO' | 'COMPRAS'>('ALACENA');
+
+  useEffect(() => {
+    if (searchTerm && activeFilter !== 'CATALOGO') {
+      const searchLower = searchTerm.toLowerCase();
+      
+      const currentTabResults = productos.filter(p => {
+        const matchesSearch = p.nombre.toLowerCase().includes(searchLower) || (p.categoria && p.categoria.toLowerCase().includes(searchLower));
+        const stockQty = p.stock_casa?.reduce((acc, s) => acc + s.cantidad, 0) || 0;
+        const matchesTab = (activeFilter === 'ALACENA' && stockQty > 0) || (activeFilter === 'COMPRAS' && p.lista_compras && p.lista_compras.length > 0);
+        return matchesSearch && matchesTab;
+      });
+
+      if (currentTabResults.length === 0) {
+        const globalResults = productos.filter(p => p.nombre.toLowerCase().includes(searchLower) || (p.categoria && p.categoria.toLowerCase().includes(searchLower)));
+        if (globalResults.length > 0) {
+          setActiveFilter('CATALOGO');
+        }
+      }
+    }
+  }, [searchTerm, activeFilter, productos]);
 
   const filtered = productos.filter(p => {
     const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || (p.categoria && p.categoria.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -120,24 +140,24 @@ export default function StockMasterView({ productos, selectedId, onSelect, onSca
         </div>
       </div>
 
-      <div className="flex border-b border-slate-100 px-2 overflow-x-auto no-scrollbar">
+      <div className="flex border-b border-slate-100">
         <button 
           onClick={() => setActiveFilter('ALACENA')}
-          className={`flex-1 min-w-[100px] py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeFilter === 'ALACENA' ? 'border-[#0F3160] text-[#0F3160]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+          className={`flex-1 py-3 text-[11px] sm:text-sm font-bold border-b-2 transition-colors ${activeFilter === 'ALACENA' ? 'border-[#0F3160] text-[#0F3160]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
         >
           📦 Alacena
         </button>
         <button 
           onClick={() => setActiveFilter('CATALOGO')}
-          className={`flex-1 min-w-[100px] py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeFilter === 'CATALOGO' ? 'border-[#0F3160] text-[#0F3160]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+          className={`flex-1 py-3 text-[11px] sm:text-sm font-bold border-b-2 transition-colors ${activeFilter === 'CATALOGO' ? 'border-[#0F3160] text-[#0F3160]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
         >
           🏷️ Catálogo
         </button>
         <button 
           onClick={() => setActiveFilter('COMPRAS')}
-          className={`flex-1 min-w-[100px] py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeFilter === 'COMPRAS' ? 'border-[#0F3160] text-[#0F3160]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+          className={`flex-1 py-3 text-[11px] sm:text-sm font-bold border-b-2 transition-colors ${activeFilter === 'COMPRAS' ? 'border-[#0F3160] text-[#0F3160]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
         >
-          🛒 Lista del Súper
+          🛒 Súper
         </button>
       </div>
 
@@ -212,26 +232,26 @@ export default function StockMasterView({ productos, selectedId, onSelect, onSca
       </div>
 
       {isSelectionMode && (
-        <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between animate-in slide-in-from-bottom-2 gap-2 overflow-x-auto">
-          <span className="text-sm font-medium text-slate-600 flex-1 whitespace-nowrap hidden sm:inline-block">
-            {selectedIds.length} seleccionado(s)
+        <div className="p-3 sm:p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between animate-in slide-in-from-bottom-2 gap-2">
+          <span className="text-xs sm:text-sm font-medium text-slate-600 hidden sm:inline-block whitespace-nowrap">
+            {selectedIds.length} sel.
           </span>
-          <div className="flex gap-2 ml-auto">
+          <div className="flex gap-2 w-full sm:w-auto justify-between sm:justify-end">
             <button 
               onClick={handleBulkAddToShoppingList}
               disabled={selectedIds.length === 0 || isSubmitting}
-              className="flex items-center gap-2 px-4 py-2 bg-[#0F3160] text-white font-bold rounded-xl hover:bg-[#0a244a] disabled:opacity-50 transition-colors text-sm whitespace-nowrap"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-[#0F3160] text-white font-bold rounded-xl hover:bg-[#0a244a] disabled:opacity-50 transition-colors text-[11px] sm:text-sm"
             >
               <ShoppingCart className="w-4 h-4" />
-              <span className="hidden sm:inline">Al Súper</span>
+              <span>Al Súper</span>
             </button>
             <button 
               onClick={handleDeleteSelected}
               disabled={selectedIds.length === 0 || isSubmitting}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors text-sm whitespace-nowrap"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors text-[11px] sm:text-sm"
             >
               <Trash2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Eliminar</span>
+              <span>Eliminar</span>
             </button>
           </div>
         </div>

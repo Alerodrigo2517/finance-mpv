@@ -10,9 +10,9 @@ export async function POST(request: Request) {
     const data = await request.json();
 
     const payload = {
+      usuario_id: user.id,
       producto_id: data.producto_id,
-      cantidad_deseada: 1,
-      completado: false
+      origen: 'manual'
     };
 
     const { data: inserted, error } = await supabase
@@ -48,7 +48,8 @@ export async function DELETE(request: Request) {
     const { error } = await supabase
       .from('lista_compras')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('usuario_id', user.id);
 
     if (error) {
       console.error("DELETE DB Error:", error);

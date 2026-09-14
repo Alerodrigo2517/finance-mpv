@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Check, Search, Tag, Loader2, Image as ImageIcon, PackagePlus, DollarSign } from 'lucide-react';
+import { X, Check, Search, Tag, Loader2, Image as ImageIcon, PackagePlus, DollarSign, ImageOff } from 'lucide-react';
 
 interface Props {
   initialData: { nombre: string; codigo_barra: string; imagen_url?: string; marca?: string; found: boolean; isExistingProduct?: boolean };
@@ -14,6 +14,7 @@ export default function ScannedProductConfirmModal({ initialData, onConfirm, onC
   const [precio, setPrecio] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>(initialData.imagen_url ? 'loading' : 'error');
 
   // Auto-focus name input on mount if empty
   useEffect(() => {
@@ -69,9 +70,31 @@ export default function ScannedProductConfirmModal({ initialData, onConfirm, onC
             </div>
           )}
 
-          {initialData.imagen_url && (
-            <div className="w-24 h-24 rounded-2xl border-2 border-slate-100 mx-auto bg-white flex items-center justify-center p-2 shadow-sm">
-              <img src={initialData.imagen_url} alt="Producto" className="w-full h-full object-contain mix-blend-multiply" />
+          {initialData.imagen_url ? (
+            <div className="w-24 h-24 rounded-2xl border-2 border-slate-100 mx-auto bg-white flex items-center justify-center p-2 shadow-sm relative overflow-hidden">
+              {imageStatus === 'loading' && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
+                  <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+                </div>
+              )}
+              {imageStatus === 'error' && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 text-slate-400 z-10 border-2 border-dashed border-slate-200 rounded-xl">
+                  <ImageOff className="w-8 h-8 mb-1 opacity-50" />
+                  <span className="text-[10px] font-medium uppercase tracking-wider opacity-70">Sin foto</span>
+                </div>
+              )}
+              <img 
+                src={initialData.imagen_url} 
+                alt="Producto" 
+                className={`w-full h-full object-contain mix-blend-multiply transition-opacity duration-300 ${imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
+                onLoad={() => setImageStatus('loaded')}
+                onError={() => setImageStatus('error')}
+              />
+            </div>
+          ) : (
+            <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-slate-200 mx-auto bg-slate-50 flex flex-col items-center justify-center text-slate-400 p-2 shadow-sm">
+              <ImageOff className="w-8 h-8 mb-1 opacity-50" />
+              <span className="text-[10px] font-medium uppercase tracking-wider opacity-70">Sin foto</span>
             </div>
           )}
 

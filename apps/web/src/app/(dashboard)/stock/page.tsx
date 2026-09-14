@@ -12,12 +12,18 @@ export default function StockPage() {
   const [loading, setLoading] = useState(true);
   const [selectedProductoId, setSelectedProductoId] = useState<string | null>(null);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [globalSuccess, setGlobalSuccess] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [scannedData, setScannedData] = useState<{ nombre: string; codigo_barra: string; imagen_url?: string; marca?: string; found: boolean; isExistingProduct?: boolean } | null>(null);
 
   const showError = (msg: string) => {
     setGlobalError(msg);
     setTimeout(() => setGlobalError(null), 3000);
+  };
+
+  const showSuccess = (msg: string) => {
+    setGlobalSuccess(msg);
+    setTimeout(() => setGlobalSuccess(null), 3000);
   };
 
   const fetchData = useCallback(async () => {
@@ -160,15 +166,18 @@ export default function StockPage() {
   const handleToggleShoppingList = async (productoId: string, currentlyInList: boolean, listItemId?: string) => {
     try {
       if (currentlyInList && listItemId) {
-        await fetch(`/api/lista_compras?id=${listItemId}`, { method: 'DELETE' });
+        const res = await fetch(`/api/lista_compras?id=${listItemId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error();
       } else {
-        await fetch('/api/lista_compras', {
+        const res = await fetch('/api/lista_compras', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ producto_id: productoId }),
         });
+        if (!res.ok) throw new Error();
       }
       await fetchData();
+      showSuccess(currentlyInList ? 'Producto quitado de la lista' : 'Producto agregado al carrito');
     } catch (e) {
       showError('Error al actualizar la lista de compras');
     }
@@ -179,7 +188,7 @@ export default function StockPage() {
       // Verify which ones are not already in the list to avoid duplicates
       const productsToAdd = productos.filter(p => ids.includes(p.id) && (!p.lista_compras || p.lista_compras.length === 0));
       
-      await Promise.all(productsToAdd.map(p => 
+      const responses = await Promise.all(productsToAdd.map(p => 
         fetch('/api/lista_compras', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -187,7 +196,11 @@ export default function StockPage() {
         })
       ));
       
+      const hasError = responses.some(r => !r.ok);
+      if (hasError) throw new Error();
+
       await fetchData();
+      showSuccess('Productos agregados exitosamente');
     } catch (e) {
       showError('Error al agregar a la lista de compras');
     }
@@ -282,8 +295,15 @@ export default function StockPage() {
 
       {/* Global Toast Error */}
       {globalError && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium z-[200] animate-in slide-in-from-bottom-2 duration-300">
+        <div className="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-3 rounded-xl shadow-lg text-sm font-medium z-[200] animate-in slide-in-from-bottom-2 duration-300">
           {globalError}
+        </div>
+      )}
+
+      {/* Global Toast Success */}
+      {globalSuccess && (
+        <div className="fixed bottom-4 right-4 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-lg text-sm font-medium z-[200] animate-in slide-in-from-bottom-2 duration-300">
+          {globalSuccess}
         </div>
       )}
     </div>

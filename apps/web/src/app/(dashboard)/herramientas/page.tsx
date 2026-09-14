@@ -13,13 +13,6 @@ export default function HerramientasPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         <ActionCard 
-          title="Lista de compras"
-          subtitle="12 productos - 2 por vencer"
-          Icon={ShoppingBag}
-          href="/stock"
-        />
-
-        <ActionCard 
           title="Vehículos"
           subtitle="Cambio de aceite en 150 km"
           Icon={CarFront}
