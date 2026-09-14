@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 import StockMasterView from '@/components/stock/StockMasterView';
 import StockDetailView from '@/components/stock/StockDetailView';
 import BarcodeScannerModal from '@/components/stock/BarcodeScannerModal';
+import ScannedProductConfirmModal from '@/components/stock/ScannedProductConfirmModal';
 
 export default function StockPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -12,6 +13,7 @@ export default function StockPage() {
   const [selectedProductoId, setSelectedProductoId] = useState<string | null>(null);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
+  const [scannedData, setScannedData] = useState<{ nombre: string; codigo_barra: string; imagen_url?: string; marca?: string; found: boolean } | null>(null);
 
   const showError = (msg: string) => {
     setGlobalError(msg);
@@ -85,7 +87,7 @@ export default function StockPage() {
     }
   };
 
-  const handleScanSuccess = async (barcodeData: { nombre: string; codigo_barra: string; imagen_url?: string; marca?: string }) => {
+  const handleScanSuccess = async (barcodeData: { nombre: string; codigo_barra: string; imagen_url?: string; marca?: string; found: boolean }) => {
     setShowScanner(false);
     
     // Check if product already exists locally
@@ -95,16 +97,16 @@ export default function StockPage() {
       return;
     }
 
-    // Add new product
+    setScannedData(barcodeData);
+  };
+
+  const handleConfirmScannedProduct = async (data: { nombre: string; categoria?: string; codigo_barra?: string; imagen_url?: string }) => {
     try {
-      await handleAddProducto({
-        nombre: barcodeData.nombre + (barcodeData.marca ? ` (${barcodeData.marca})` : ''),
-        categoria: 'General',
-        codigo_barra: barcodeData.codigo_barra,
-        imagen_url: barcodeData.imagen_url,
-      });
-    } catch (e) {
-      showError('Error al guardar el producto escaneado. ¿Ejecutaste el script SQL?');
+      await handleAddProducto(data);
+      setScannedData(null);
+    } catch (e: any) {
+      showError(e.message || 'Error al guardar el producto');
+      throw e;
     }
   };
 
@@ -165,6 +167,15 @@ export default function StockPage() {
         <BarcodeScannerModal 
           onClose={() => setShowScanner(false)} 
           onScanSuccess={handleScanSuccess} 
+        />
+      )}
+
+      {/* Scanned Product Confirm Modal */}
+      {scannedData && (
+        <ScannedProductConfirmModal
+          initialData={scannedData}
+          onConfirm={handleConfirmScannedProduct}
+          onCancel={() => setScannedData(null)}
         />
       )}
 

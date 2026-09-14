@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Producto } from '@/types';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import { Plus, Search, Package, ScanLine, Trash2, ListChecks, X } from 'lucide-react';
 
 interface Props {
@@ -20,6 +21,7 @@ export default function StockMasterView({ productos, selectedId, onSelect, onAdd
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
   const filtered = productos.filter(p => 
     p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -45,16 +47,20 @@ export default function StockMasterView({ productos, selectedId, onSelect, onAdd
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => {
     if (!onDelete || selectedIds.length === 0) return;
-    const confirmDelete = window.confirm(`¿Estás seguro que deseas eliminar ${selectedIds.length} producto(s)?`);
-    if (!confirmDelete) return;
+    setShowConfirmDelete(true);
+  };
+
+  const confirmDeletion = async () => {
+    if (!onDelete || selectedIds.length === 0) return;
     
     setIsSubmitting(true);
     try {
       await onDelete(selectedIds);
       setIsSelectionMode(false);
       setSelectedIds([]);
+      setShowConfirmDelete(false);
     } catch (e) {
       console.error(e);
     } finally {
@@ -186,10 +192,22 @@ export default function StockMasterView({ productos, selectedId, onSelect, onAdd
             className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
           >
             <Trash2 className="w-4 h-4" />
-            {isSubmitting ? 'Eliminando...' : 'Eliminar'}
+            Eliminar
           </button>
         </div>
       )}
+
+      <ConfirmModal 
+        isOpen={showConfirmDelete}
+        title="Eliminar Productos"
+        message={`¿Estás seguro de que deseas eliminar ${selectedIds.length} producto(s)? Esta acción no se puede deshacer.`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        isDestructive={true}
+        isLoading={isSubmitting}
+        onConfirm={confirmDeletion}
+        onCancel={() => setShowConfirmDelete(false)}
+      />
     </div>
   );
 }

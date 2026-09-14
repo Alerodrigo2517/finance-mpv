@@ -4,7 +4,7 @@ import { X, Loader2, Camera, AlertCircle } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
-  onScanSuccess: (data: { nombre: string; codigo_barra: string; imagen_url?: string; marca?: string }) => void;
+  onScanSuccess: (data: { nombre: string; codigo_barra: string; imagen_url?: string; marca?: string; found: boolean }) => void;
 }
 
 export default function BarcodeScannerModal({ onClose, onScanSuccess }: Props) {
@@ -63,18 +63,20 @@ export default function BarcodeScannerModal({ onClose, onScanSuccess }: Props) {
       const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${decodedText}.json`);
       const data = await res.json();
       
-      if (data.status === 1 && data.product) {
+      if (data.status === 1 && data.product && data.product.product_name) {
         onScanSuccess({
-          nombre: data.product.product_name || 'Producto Desconocido',
+          nombre: data.product.product_name,
           codigo_barra: decodedText,
           imagen_url: data.product.image_url,
           marca: data.product.brands?.split(',')[0],
+          found: true
         });
       } else {
-        // Not found in Open Food Facts, just pass the barcode
+        // Not found in Open Food Facts or has no name, just pass the barcode
         onScanSuccess({
-          nombre: `Producto ${decodedText}`,
+          nombre: '',
           codigo_barra: decodedText,
+          found: false
         });
       }
     } catch (e) {
