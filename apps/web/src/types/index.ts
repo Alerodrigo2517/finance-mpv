@@ -82,6 +82,27 @@ export interface ComponenteVehiculo {
   created_at?: string;
 }
 
+export interface ReparacionVehiculo {
+  id: string;
+  vehiculo_id?: string;
+  fecha: string;
+  descripcion: string;
+  costo: number;
+  taller?: string;
+  created_at?: string;
+}
+
+export interface CombustibleVehiculo {
+  id: string;
+  vehiculo_id?: string;
+  fecha: string;
+  litros: number;
+  costo_total: number;
+  precio_litro?: number;
+  kilometraje_momento?: number;
+  created_at?: string;
+}
+
 export interface Vehiculo {
   id: string;
   usuario_id?: string;
@@ -93,6 +114,8 @@ export interface Vehiculo {
   patente?: string;
   created_at?: string;
   componentes?: ComponenteVehiculo[];
+  reparaciones?: ReparacionVehiculo[];
+  combustibles?: CombustibleVehiculo[];
 }
 
 export interface Stock {

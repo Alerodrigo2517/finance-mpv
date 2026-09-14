@@ -37,6 +37,12 @@ export default function ServiciosPage() {
   const [eF_Periodo, setEF_Periodo] = useState('');
   const [eF_Consumo, setEF_Consumo] = useState('');
   const [editStatus, setEditStatus] = useState<{status: 'idle'|'loading'|'error'|'success', message: string}>({status: 'idle', message: ''});
+  const [globalError, setGlobalError] = useState<string | null>(null);
+
+  const showError = (msg: string) => {
+    setGlobalError(msg);
+    setTimeout(() => setGlobalError(null), 3000);
+  };
 
   const fetchData = async () => {
     try {
@@ -100,10 +106,10 @@ export default function ServiciosPage() {
       if (res.ok) {
         await fetchData();
       } else {
-        alert('Error al marcar factura como pagada');
+        showError('Error al marcar factura como pagada');
       }
     } catch (e) {
-      alert('Error de conexión');
+      showError('Error de conexión');
     }
   };
 
@@ -354,6 +360,11 @@ export default function ServiciosPage() {
         </div>
       )}
 
+      {globalError && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium z-[200] animate-in slide-in-from-bottom-2 duration-300">
+          {globalError}
+        </div>
+      )}
     </div>
   );
 }

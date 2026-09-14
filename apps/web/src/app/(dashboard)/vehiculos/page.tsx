@@ -1,140 +1,151 @@
 'use client';
-import { useState, useEffect } from 'react';
-
-import { Vehiculo, ComponenteVehiculo } from '@/types';
+import { useState, useEffect, useCallback } from 'react';
+import { Vehiculo } from '@/types';
+import { Loader2 } from 'lucide-react';
+import VehiculosMasterView from '@/components/vehiculos/VehiculosMasterView';
+import VehiculoDetailView from '@/components/vehiculos/VehiculoDetailView';
 
 export default function VehiculosPage() {
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedVehiculoId, setSelectedVehiculoId] = useState<string | null>(null);
+  const [globalError, setGlobalError] = useState<string | null>(null);
 
-  const [showForm, setShowForm] = useState(false);
-  const [marca, setMarca] = useState('');
-  const [modelo, setModelo] = useState('');
-  const [anio, setAnio] = useState('');
-  const [km, setKm] = useState('');
-
-  const fetchData = async () => {
-    try {
-      const res = await fetch('/api/vehiculos');
-      if (res.ok) setVehiculos(await res.json());
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+  const showError = (msg: string) => {
+    setGlobalError(msg);
+    setTimeout(() => setGlobalError(null), 3000);
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const fetchData = useCallback(async () => {
     try {
-      const res = await fetch('/api/vehiculos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ marca, modelo, anio, kilometrajeActual: km }),
-      });
+      const res = await fetch('/api/vehiculos');
       if (res.ok) {
-        setMarca(''); setModelo(''); setAnio(''); setKm('');
-        setShowForm(false);
-        fetchData();
+        const data = await res.json();
+        setVehiculos(data);
+      } else {
+        showError('No se pudieron cargar los vehículos');
       }
     } catch (e) {
       console.error(e);
+      showError('Error de conexión al cargar los vehículos');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleAddVehiculo = async (data: { marca: string; modelo: string; anio: number; kilometrajeActual: number }) => {
+    const res = await fetch('/api/vehiculos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) {
+      await fetchData();
+    } else {
+      throw new Error('Error al guardar');
     }
   };
 
-  const handleAddComponente = async (vehiculoId: string) => {
-    const tipo = prompt('Tipo de componente (ej. Aceite, Cubiertas):');
-    const vidaUtil = prompt('Vida útil en km (ej. 10000):');
-    const kmCambio = prompt('Kilometraje al momento del cambio (ej. 50000):');
-    const fecha = prompt('Fecha del cambio (YYYY-MM-DD):');
-
-    if (tipo && vidaUtil && kmCambio && fecha) {
-      await fetch('/api/componentes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vehiculoId, tipoComponente: tipo, kmVidaUtil: vidaUtil, kmUltimoCambio: kmCambio, fechaUltimoCambio: fecha })
-      });
-      fetchData();
+  const handleAddComponente = async (vehiculoId: string, data: { tipoComponente: string; kmVidaUtil: number; kmUltimoCambio: number; fechaUltimoCambio: string }) => {
+    const res = await fetch('/api/componentes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vehiculoId, ...data })
+    });
+    if (res.ok) {
+      await fetchData();
+    } else {
+      throw new Error('Error al agregar componente');
     }
   };
 
-  return (
-    <div>
-      <h1 className="text-3xl font-bold mb-2 text-[#0F3160]">Mis Vehículos</h1>
-      <p className="text-lg text-slate-500 mb-6">Mantenimiento predictivo e historial</p>
+  const handleAddReparacion = async (vehiculoId: string, data: any) => {
+    const res = await fetch('/api/reparaciones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vehiculoId, ...data })
+    });
+    if (res.ok) {
+      await fetchData();
+    } else {
+      throw new Error('Error al agregar reparación');
+    }
+  };
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        <div className="glass-panel p-8 flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <span className="text-xl font-semibold text-[#0F3160]">Vehículos Registrados</span>
-            <button className="btn-primary text-sm px-3 py-1" onClick={() => setShowForm(!showForm)}>
-              {showForm ? 'Cancelar' : '+ Agregar'}
-            </button>
-          </div>
+  const handleAddCombustible = async (vehiculoId: string, data: any) => {
+    const res = await fetch('/api/combustible', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vehiculoId, ...data })
+    });
+    if (res.ok) {
+      await fetchData();
+    } else {
+      throw new Error('Error al agregar carga de combustible');
+    }
+  };
 
-          {showForm && (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3 mt-2 bg-slate-50 p-4 rounded-lg border border-slate-200">
-              <input type="text" placeholder="Marca (Ej. Ford)" value={marca} onChange={(e) => setMarca(e.target.value)} required className="input-field" />
-              <input type="text" placeholder="Modelo (Ej. Fiesta)" value={modelo} onChange={(e) => setModelo(e.target.value)} required className="input-field" />
-              <input type="number" placeholder="Año" value={anio} onChange={(e) => setAnio(e.target.value)} required className="input-field" />
-              <input type="number" placeholder="Kilometraje Actual" value={km} onChange={(e) => setKm(e.target.value)} required className="input-field" />
-              <button type="submit" className="btn-primary">Guardar Vehículo</button>
-            </form>
-          )}
+  const selectedVehiculo = vehiculos.find(v => v.id === selectedVehiculoId);
 
-          <div className="mt-4 flex flex-col gap-2">
-            {loading ? <p className="text-slate-500">Cargando...</p> : 
-             vehiculos.length === 0 ? <p className="text-slate-500">No hay vehículos.</p> :
-             vehiculos.map(v => (
-               <div key={v.id} className="p-3 bg-slate-50 rounded-md border border-slate-200 flex flex-col gap-2">
-                 <div className="flex justify-between items-center">
-                   <div>
-                     <span className="font-medium block">{v.marca} {v.modelo}</span>
-                     <span className="text-slate-500 text-sm">Año {v.anio} - {v.kilometrajeActual} km</span>
-                   </div>
-                   <button className="btn-secondary text-xs px-2 py-1" onClick={() => handleAddComponente(v.id)}>
-                     + Componente
-                   </button>
-                 </div>
-                 {v.componentes && v.componentes.length > 0 && (
-                   <div className="mt-2 text-xs text-slate-500">
-                     {v.componentes.map((c: ComponenteVehiculo) => (
-                       <span key={c.id} className="mr-2 inline-block bg-white/5 p-1 rounded">{c.tipoComponente}</span>
-                     ))}
-                   </div>
-                 )}
-               </div>
-             ))
-            }
-          </div>
-        </div>
-        
-        <div className="glass-panel p-8 flex flex-col gap-4">
-          <span className="text-xl font-semibold text-[#0F3160]">Mantenimientos Recomendados</span>
-          <div className="mt-4 flex flex-col gap-2">
-            {vehiculos.flatMap(v => v.componentes?.map(c => {
-               const kmParaCambio = ((c.kmUltimoCambio || 0) + (c.kmVidaUtil || 0)) - (v.kilometrajeActual || 0);
-               if (kmParaCambio > 2000) return null; // Aún falta mucho
-               
-               const isDanger = kmParaCambio < 0;
-               return (
-                 <div key={c.id} className={`p-3 rounded-md border flex justify-between items-center ${isDanger ? 'bg-danger/10 border-danger' : 'bg-warning/10 border-warning'}`}>
-                   <div>
-                     <span className="font-medium block">{v.marca} {v.modelo} - {c.tipoComponente}</span>
-                     <span className={`text-sm ${isDanger ? 'text-danger' : 'text-warning'}`}>
-                       {isDanger ? `¡Vencido por ${Math.abs(kmParaCambio)} km!` : `Próximo en ${kmParaCambio} km`}
-                     </span>
-                   </div>
-                 </div>
-               );
-            }))}
-          </div>
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="w-8 h-8 text-[#0F3160] animate-spin" />
+          <p className="text-slate-500 font-medium">Cargando vehículos...</p>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col md:flex-row h-[calc(100vh-80px)] md:h-[calc(100vh-100px)] gap-6 overflow-hidden animate-in fade-in duration-300">
+      
+      {/* Sidebar - Master View */}
+      <div className={`w-full md:w-80 shrink-0 h-full flex flex-col ${selectedVehiculoId ? 'hidden md:flex' : 'flex'}`}>
+        <VehiculosMasterView 
+          vehiculos={vehiculos}
+          selectedId={selectedVehiculoId}
+          onSelect={setSelectedVehiculoId}
+          onAdd={handleAddVehiculo}
+        />
+      </div>
+
+      {/* Main Content - Detail View */}
+      <div className={`flex-1 h-full min-w-0 ${!selectedVehiculoId ? 'hidden md:flex' : 'flex'}`}>
+        {selectedVehiculo ? (
+          <VehiculoDetailView 
+            vehiculo={selectedVehiculo}
+            onRefresh={fetchData}
+            onAddComponente={(data) => handleAddComponente(selectedVehiculo.id, data)}
+            onAddReparacion={(data) => handleAddReparacion(selectedVehiculo.id, data)}
+            onAddCombustible={(data) => handleAddCombustible(selectedVehiculo.id, data)}
+          />
+        ) : (
+          <div className="hidden md:flex w-full h-full items-center justify-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-slate-500">Selecciona un vehículo</h3>
+              <p className="text-sm text-slate-400 mt-1">Elige un vehículo de la lista para ver sus detalles</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Global Toast Error */}
+      {globalError && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium z-[200] animate-in slide-in-from-bottom-2 duration-300">
+          {globalError}
+        </div>
+      )}
     </div>
   );
 }

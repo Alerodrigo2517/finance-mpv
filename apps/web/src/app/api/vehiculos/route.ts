@@ -9,7 +9,7 @@ export async function GET() {
     
     const { data: vehiculos, error } = await supabase
       .from('vehiculos')
-      .select('*, componentes:componente_vehiculos(*)')
+      .select('*, componentes:componente_vehiculos(*), reparaciones:reparaciones_vehiculos(*), combustibles:combustible_vehiculos(*)')
       .order('id', { ascending: false });
 
     if (error) throw error;

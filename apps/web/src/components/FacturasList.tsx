@@ -20,6 +20,8 @@ export default function FacturasList({ facturas, nombreProveedor, onDeleteFactur
   const [confirmPayId, setConfirmPayId] = useState<string | null>(null);
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [metodoPago, setMetodoPago] = useState<string>('');
+  const [payError, setPayError] = useState<boolean>(false);
+  const [globalError, setGlobalError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -30,11 +32,12 @@ export default function FacturasList({ facturas, nombreProveedor, onDeleteFactur
     setConfirmPayId(id);
     setFileToUpload(null);
     setMetodoPago('');
+    setPayError(false);
   };
 
   const handleConfirmPayWithoutReceipt = async () => {
     if (!onPayFactura || !confirmPayId) return;
-    if (!metodoPago) { alert('Por favor, selecciona un método de pago.'); return; }
+    if (!metodoPago) { setPayError(true); return; }
     const id = confirmPayId;
     setConfirmPayId(null);
     setPayingId(id);
@@ -47,7 +50,7 @@ export default function FacturasList({ facturas, nombreProveedor, onDeleteFactur
 
   const handleConfirmPayWithReceipt = async () => {
     if (!onPayFactura || !confirmPayId || !fileToUpload) return;
-    if (!metodoPago) { alert('Por favor, selecciona un método de pago.'); return; }
+    if (!metodoPago) { setPayError(true); return; }
     const id = confirmPayId;
     setIsUploading(true);
     
@@ -69,7 +72,8 @@ export default function FacturasList({ facturas, nombreProveedor, onDeleteFactur
       await onPayFactura(id);
     } catch (error) {
       console.error(error);
-      alert('Hubo un error al subir el comprobante.');
+      setGlobalError('Hubo un error al subir el comprobante.');
+      setTimeout(() => setGlobalError(null), 3000);
     } finally {
       setIsUploading(false);
       setConfirmPayId(null);
@@ -218,7 +222,7 @@ export default function FacturasList({ facturas, nombreProveedor, onDeleteFactur
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full relative flex flex-col gap-4 animate-in zoom-in-95 duration-200">
             <button 
-              onClick={() => setConfirmPayId(null)} 
+              onClick={() => { setConfirmPayId(null); setPayError(false); }} 
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 p-1.5 rounded-full transition-colors"
             >
               <X className="w-5 h-5" />
@@ -237,8 +241,11 @@ export default function FacturasList({ facturas, nombreProveedor, onDeleteFactur
                 <label className="text-xs font-bold text-slate-600">Método de pago <span className="text-red-500">*</span></label>
                 <select 
                   value={metodoPago} 
-                  onChange={(e) => setMetodoPago(e.target.value)}
-                  className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl p-3 text-sm font-medium text-slate-700 focus:outline-none focus:border-[#0F3160] transition-colors"
+                  onChange={(e) => {
+                    setMetodoPago(e.target.value);
+                    if (payError) setPayError(false);
+                  }}
+                  className={`w-full bg-slate-50 border-2 ${payError ? 'border-red-500 bg-red-50' : 'border-slate-200 focus:border-[#0F3160]'} rounded-xl p-3 text-sm font-medium text-slate-700 focus:outline-none transition-colors`}
                 >
                   <option value="" disabled>Selecciona una opción</option>
                   <option value="Efectivo">Efectivo</option>
@@ -247,6 +254,7 @@ export default function FacturasList({ facturas, nombreProveedor, onDeleteFactur
                   <option value="Banco Nación">Banco Nación</option>
                   <option value="Banco (Otro)">Banco (Otro)</option>
                 </select>
+                {payError && <span className="text-xs font-bold text-red-500 mt-0.5 animate-in slide-in-from-top-1 duration-200">Por favor, selecciona un método de pago.</span>}
               </div>
               {/* File Input */}
               <div className="relative">
@@ -338,6 +346,13 @@ export default function FacturasList({ facturas, nombreProveedor, onDeleteFactur
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Global Toast Error */}
+      {globalError && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium z-[200] animate-in slide-in-from-bottom-2 duration-300">
+          {globalError}
         </div>
       )}
     </>
