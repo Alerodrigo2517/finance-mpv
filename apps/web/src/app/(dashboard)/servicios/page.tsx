@@ -223,8 +223,8 @@ export default function ServiciosPage() {
       if (f.estado === 'PENDIENTE') {
         pendientePagoServicio += Number(f.monto);
       }
-      if (fYear === selectedYear && (f.kwConsumidos || f.kw_consumidos)) {
-        consumosAnuales.push(Number(f.kwConsumidos || f.kw_consumidos));
+      if (fYear === selectedYear && (f.kwConsumidos || (f as any).kw_consumidos)) {
+        consumosAnuales.push(Number(f.kwConsumidos || (f as any).kw_consumidos));
       }
     });
   }
