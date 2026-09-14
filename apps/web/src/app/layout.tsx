@@ -1,10 +1,24 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Providers from '@/components/Providers';
 
 export const metadata: Metadata = {
-  title: 'Finanzas MVP',
-  description: 'Sistema de Gestión de Finanzas Personales',
+  title: 'Finance MVP',
+  description: 'Tu gestor personal financiero e inventario del hogar',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Finance MVP',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0F3160',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

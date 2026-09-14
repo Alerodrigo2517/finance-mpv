@@ -78,12 +78,16 @@ export default function StockPage() {
     }
 
     // Add new product
-    await handleAddProducto({
-      nombre: barcodeData.nombre + (barcodeData.marca ? ` (${barcodeData.marca})` : ''),
-      categoria: 'General',
-      codigo_barra: barcodeData.codigo_barra,
-      imagen_url: barcodeData.imagen_url,
-    });
+    try {
+      await handleAddProducto({
+        nombre: barcodeData.nombre + (barcodeData.marca ? ` (${barcodeData.marca})` : ''),
+        categoria: 'General',
+        codigo_barra: barcodeData.codigo_barra,
+        imagen_url: barcodeData.imagen_url,
+      });
+    } catch (e) {
+      showError('Error al guardar el producto escaneado. ¿Ejecutaste el script SQL?');
+    }
   };
 
   const selectedProducto = productos.find(p => p.id === selectedProductoId);
