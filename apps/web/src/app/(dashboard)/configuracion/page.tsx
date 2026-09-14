@@ -11,14 +11,28 @@ type Categoria = {
   tipo: string;
 };
 
+type TipoServicio = {
+  id: string;
+  nombre: string;
+};
+
 export default function ConfiguracionPage() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [tiposServicios, setTiposServicios] = useState<TipoServicio[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingTS, setLoadingTS] = useState(true);
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevoTipo, setNuevoTipo] = useState('EGRESO');
+  const [nuevoNombreTS, setNuevoNombreTS] = useState('');
+  
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  
+  const [editTSId, setEditTSId] = useState<string | null>(null);
+  const [deleteTSId, setDeleteTSId] = useState<string | null>(null);
+  
   const [error, setError] = useState('');
+  const [errorTS, setErrorTS] = useState('');
 
   const fetchCategorias = async () => {
     try {
@@ -34,8 +48,23 @@ export default function ConfiguracionPage() {
     }
   };
 
+  const fetchTiposServicios = async () => {
+    try {
+      const res = await fetch('/api/tipos-servicios');
+      if (res.ok) {
+        const data = await res.json();
+        setTiposServicios(data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingTS(false);
+    }
+  };
+
   useEffect(() => {
     fetchCategorias();
+    fetchTiposServicios();
   }, []);
 
   const handleAddCategoria = async (e: React.FormEvent) => {
@@ -83,6 +112,52 @@ export default function ConfiguracionPage() {
     const res = await fetch(`/api/categorias/${deleteId}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Error al eliminar la categoría');
     fetchCategorias();
+  };
+
+  const handleAddTipoServicio = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorTS('');
+    if (!nuevoNombreTS.trim()) return;
+
+    try {
+      const url = editTSId ? `/api/tipos-servicios/${editTSId}` : '/api/tipos-servicios';
+      const method = editTSId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre: nuevoNombreTS }),
+      });
+
+      if (res.ok) {
+        setNuevoNombreTS('');
+        setEditTSId(null);
+        fetchTiposServicios();
+      } else {
+        const data = await res.json();
+        setErrorTS(data.error || 'Error al guardar');
+      }
+    } catch (e) {
+      setErrorTS('Error de red');
+    }
+  };
+
+  const handleEditTS = (ts: TipoServicio) => {
+    setEditTSId(ts.id);
+    setNuevoNombreTS(ts.nombre);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEditTS = () => {
+    setEditTSId(null);
+    setNuevoNombreTS('');
+  };
+
+  const confirmDeleteTS = async () => {
+    if (!deleteTSId) return;
+    const res = await fetch(`/api/tipos-servicios/${deleteTSId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Error al eliminar');
+    fetchTiposServicios();
   };
 
   const ingresos = categorias.filter(c => c.tipo === 'INGRESO');
@@ -229,12 +304,105 @@ export default function ConfiguracionPage() {
 
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+        
+        {/* Formulario de Alta Tipo Servicio */}
+        <div className="lg:col-span-1">
+          <form onSubmit={handleAddTipoServicio} className="glass-panel p-6 flex flex-col gap-5 sticky top-8">
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  <Tag className="w-5 h-5 text-primary" />
+                  {editTSId ? 'Editar Servicio' : 'Nuevo Tipo de Servicio'}
+                </h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  {editTSId ? 'Modifica el nombre de este servicio.' : 'Agrega opciones para tus servicios.'}
+                </p>
+              </div>
+              {editTSId && (
+                <button type="button" onClick={handleCancelEditTS} className="text-slate-400 hover:text-slate-600" title="Cancelar edición">
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+
+            {errorTS && <div className="text-sm text-danger bg-danger/10 p-3 rounded-lg">{errorTS}</div>}
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-slate-700">Nombre del Servicio</label>
+              <input 
+                type="text" 
+                value={nuevoNombreTS} 
+                onChange={(e) => setNuevoNombreTS(e.target.value)} 
+                placeholder="Ej. Luz, Gas, Internet..."
+                className="input-field py-3 bg-slate-50"
+                required
+              />
+            </div>
+
+            <button type="submit" className="btn-primary flex items-center justify-center gap-2 py-3 mt-2">
+              {editTSId ? <Save className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+              {editTSId ? 'Guardar Cambios' : 'Guardar Servicio'}
+            </button>
+          </form>
+        </div>
+
+        {/* Listado de Tipos de Servicios */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <div className="glass-panel p-6">
+            <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
+              Tipos de Servicios
+            </h3>
+            {loadingTS ? (
+              <p className="text-slate-500 text-sm">Cargando...</p>
+            ) : tiposServicios.length === 0 ? (
+              <p className="text-slate-500 text-sm italic">No tienes tipos de servicios personalizados adicionales. Crea uno para agregarlo a la lista de opciones.</p>
+            ) : (
+              <ul className="flex flex-wrap gap-3">
+                {tiposServicios.map(ts => (
+                  <li key={ts.id} className="bg-white border border-slate-200 shadow-sm rounded-full pl-4 pr-2 py-1.5 flex items-center gap-3 group hover:border-primary/30 transition-colors">
+                    <span className="text-sm font-medium text-slate-700">{ts.nombre}</span>
+                    <div className="flex items-center">
+                      <button 
+                        type="button"
+                        onClick={() => handleEditTS(ts)}
+                        className="text-slate-400 hover:text-primary hover:bg-primary/10 p-1.5 rounded-full transition-colors"
+                        title="Editar servicio"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setDeleteTSId(ts.id)}
+                        className="text-slate-400 hover:text-danger hover:bg-danger/10 p-1.5 rounded-full transition-colors"
+                        title="Eliminar servicio"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+      </div>
+
       <ConfirmDeleteDialog
         isOpen={deleteId !== null}
         onClose={() => setDeleteId(null)}
         onConfirm={confirmDelete}
         title="¿Eliminar categoría?"
         description="¿Estás seguro de que deseas eliminar esta categoría? (Los movimientos existentes mantendrán el nombre)."
+      />
+
+      <ConfirmDeleteDialog
+        isOpen={deleteTSId !== null}
+        onClose={() => setDeleteTSId(null)}
+        onConfirm={confirmDeleteTS}
+        title="¿Eliminar tipo de servicio?"
+        description="¿Estás seguro de que deseas eliminar este tipo de servicio?"
       />
     </div>
   );

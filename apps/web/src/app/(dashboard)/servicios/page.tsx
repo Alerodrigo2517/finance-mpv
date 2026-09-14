@@ -13,6 +13,7 @@ import { Servicio, Factura } from '@/types';
 
 export default function ServiciosPage() {
   const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [tiposServicios, setTiposServicios] = useState<{id: string, nombre: string}[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Master-Detail State
@@ -46,10 +47,18 @@ export default function ServiciosPage() {
 
   const fetchData = async () => {
     try {
-      const resS = await fetch('/api/servicios');
+      const [resS, resTS] = await Promise.all([
+        fetch('/api/servicios'),
+        fetch('/api/tipos-servicios')
+      ]);
+      
       if (resS.ok) {
         const data = await resS.json();
         setServicios(data);
+      }
+      if (resTS.ok) {
+        const dataTS = await resTS.json();
+        setTiposServicios(dataTS);
       }
     } catch (error) {
       console.error(error);
@@ -349,7 +358,35 @@ export default function ServiciosPage() {
             
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Nombre del Servicio <span className="text-red-500">*</span></label>
-              <input type="text" placeholder="Ej. EDEA, Camuzzi, Personal" value={sNombre} onChange={(e) => setSNombre(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 placeholder:text-slate-400" />
+              <select 
+                value={sNombre} 
+                onChange={(e) => setSNombre(e.target.value)} 
+                required 
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20 text-slate-900 cursor-pointer"
+              >
+                <option value="" disabled>Seleccione un servicio</option>
+                <optgroup label="Comunes">
+                  <option value="Luz">Luz</option>
+                  <option value="Gas">Gas</option>
+                  <option value="Agua">Agua</option>
+                  <option value="Internet">Internet</option>
+                  <option value="TV">TV</option>
+                  <option value="Internet y TV">Internet y TV</option>
+                  <option value="Impuestos">Impuestos</option>
+                  <option value="Celular">Celular</option>
+                  <option value="Seguro">Seguro</option>
+                  <option value="Alquiler">Alquiler</option>
+                  <option value="Expensas">Expensas</option>
+                </optgroup>
+                {tiposServicios.length > 0 && (
+                  <optgroup label="Personalizados">
+                    {tiposServicios.map(ts => (
+                      <option key={ts.id} value={ts.nombre}>{ts.nombre}</option>
+                    ))}
+                  </optgroup>
+                )}
+                <option value="Otro">Otro</option>
+              </select>
             </div>
 
             <div className="flex gap-3 mt-4">
