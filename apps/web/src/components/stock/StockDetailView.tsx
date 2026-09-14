@@ -26,7 +26,7 @@ export default function StockDetailView({ producto, onRefresh, onAddPrecio, onTo
   ];
 
   const stockQty = producto.stock_casa?.reduce((acc, s) => acc + s.cantidad, 0) || 0;
-  const inShoppingList = producto.lista_compras && producto.lista_compras.length > 0;
+  const inShoppingList = !!(producto.lista_compras && producto.lista_compras.length > 0);
   const [isTogglingList, setIsTogglingList] = useState(false);
 
   const handleSubmitPrecio = async (e: React.FormEvent) => {
