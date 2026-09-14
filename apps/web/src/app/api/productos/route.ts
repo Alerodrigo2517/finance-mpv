@@ -18,9 +18,13 @@ export async function GET() {
       `)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error("GET DB Error:", error);
+      throw error;
+    }
     return NextResponse.json(productos);
-  } catch (error) {
+  } catch (error: any) {
+    console.error("GET Catch Error:", error);
     return NextResponse.json({ error: 'Error al obtener productos' }, { status: 500 });
   }
 }
@@ -53,9 +57,13 @@ export async function POST(request: Request) {
 
     const { data: producto, error } = dbResult;
 
-    if (error) throw error;
+    if (error) {
+      console.error("DB Error:", error);
+      throw error;
+    }
     return NextResponse.json(producto, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ error: 'Error al crear producto' }, { status: 500 });
+  } catch (error: any) {
+    console.error("Catch Error:", error);
+    return NextResponse.json({ error: error.message || 'Error al crear producto', details: error }, { status: 500 });
   }
 }

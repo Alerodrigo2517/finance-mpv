@@ -50,7 +50,8 @@ export default function StockPage() {
       await fetchData();
       setSelectedProductoId(newProd.id);
     } else {
-      throw new Error('Error al guardar el producto');
+      const err = await res.json();
+      throw new Error(err.error || 'Error al guardar el producto');
     }
   };
 
