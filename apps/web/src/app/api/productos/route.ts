@@ -33,19 +33,25 @@ export async function POST(request: Request) {
 
     const data = await request.json();
 
-    // Upsert the product
-    const { data: producto, error } = await supabase
-      .from('productos')
-      .upsert({
-        id: data.id, // Will insert new if null, update if exists
-        usuario_id: user.id,
-        nombre: data.nombre,
-        categoria: data.categoria || null,
-        codigo_barra: data.codigo_barra || null,
-        imagen_url: data.imagen_url || null,
-      }, { onConflict: 'id' })
-      .select()
-      .single();
+    // Build payload
+    const payload: any = {
+      usuario_id: user.id,
+      nombre: data.nombre,
+      categoria: data.categoria || null,
+      codigo_barra: data.codigo_barra || null,
+      imagen_url: data.imagen_url || null,
+    };
+
+    let query = supabase.from('productos');
+    let dbResult;
+
+    if (data.id) {
+      dbResult = await query.update(payload).eq('id', data.id).select().single();
+    } else {
+      dbResult = await query.insert(payload).select().single();
+    }
+
+    const { data: producto, error } = dbResult;
 
     if (error) throw error;
     return NextResponse.json(producto, { status: 201 });
