@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Producto } from '@/types';
-import { Plus, Search, Package, ScanLine } from 'lucide-react';
+import { Plus, Search, Package, ScanLine, Trash2, ListChecks, X } from 'lucide-react';
 
 interface Props {
   productos: Producto[];
@@ -8,15 +8,18 @@ interface Props {
   onSelect: (id: string) => void;
   onAdd: (data: { nombre: string; categoria?: string; codigo_barra?: string }) => Promise<void>;
   onScanClick: () => void;
+  onDelete?: (ids: string[]) => Promise<void>;
 }
 
-export default function StockMasterView({ productos, selectedId, onSelect, onAdd, onScanClick }: Props) {
+export default function StockMasterView({ productos, selectedId, onSelect, onAdd, onScanClick, onDelete }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [nombre, setNombre] = useState('');
   const [categoria, setCategoria] = useState('');
   const [codigo, setCodigo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const filtered = productos.filter(p => 
     p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -38,12 +41,45 @@ export default function StockMasterView({ productos, selectedId, onSelect, onAdd
     }
   };
 
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!onDelete || selectedIds.length === 0) return;
+    const confirmDelete = window.confirm(`¿Estás seguro que deseas eliminar ${selectedIds.length} producto(s)?`);
+    if (!confirmDelete) return;
+    
+    setIsSubmitting(true);
+    try {
+      await onDelete(selectedIds);
+      setIsSelectionMode(false);
+      setSelectedIds([]);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-slate-100 flex flex-col gap-4">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-extrabold text-[#0F3160]">Productos</h2>
           <div className="flex gap-2">
+            <button 
+              onClick={() => {
+                setIsSelectionMode(!isSelectionMode);
+                if (isSelectionMode) setSelectedIds([]);
+              }}
+              className={`w-10 h-10 flex items-center justify-center rounded-xl transition-colors ${
+                isSelectionMode ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+              }`}
+              title="Selección Múltiple"
+            >
+              {isSelectionMode ? <X className="w-5 h-5" /> : <ListChecks className="w-5 h-5" />}
+            </button>
             <button 
               onClick={onScanClick}
               className="w-10 h-10 flex items-center justify-center bg-blue-50 text-primary rounded-xl hover:bg-blue-100 transition-colors"
@@ -94,13 +130,28 @@ export default function StockMasterView({ productos, selectedId, onSelect, onAdd
             return (
               <button
                 key={p.id}
-                onClick={() => onSelect(p.id)}
+                onClick={() => {
+                  if (isSelectionMode) {
+                    toggleSelection(p.id);
+                  } else {
+                    onSelect(p.id);
+                  }
+                }}
                 className={`flex items-center gap-4 p-4 rounded-2xl border text-left transition-all ${
-                  selectedId === p.id 
-                    ? 'border-primary bg-blue-50/50 shadow-sm' 
-                    : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50'
+                  isSelectionMode && selectedIds.includes(p.id)
+                    ? 'border-red-400 bg-red-50/50 shadow-sm'
+                    : selectedId === p.id 
+                      ? 'border-primary bg-blue-50/50 shadow-sm' 
+                      : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50'
                 }`}
               >
+                {isSelectionMode && (
+                  <div className="flex items-center justify-center shrink-0">
+                    <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedIds.includes(p.id) ? 'bg-red-500 border-red-500' : 'border-slate-300 bg-white'}`}>
+                      {selectedIds.includes(p.id) && <X className="w-3 h-3 text-white" />}
+                    </div>
+                  </div>
+                )}
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${p.imagen_url ? 'bg-white' : 'bg-slate-100'}`}>
                   {p.imagen_url ? (
                     <img src={p.imagen_url} alt={p.nombre} className="w-full h-full object-contain rounded-xl mix-blend-multiply" />
@@ -123,6 +174,22 @@ export default function StockMasterView({ productos, selectedId, onSelect, onAdd
           })
         )}
       </div>
+
+      {isSelectionMode && (
+        <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between animate-in slide-in-from-bottom-2">
+          <span className="text-sm font-medium text-slate-600">
+            {selectedIds.length} seleccionado(s)
+          </span>
+          <button 
+            onClick={handleDeleteSelected}
+            disabled={selectedIds.length === 0 || isSubmitting}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+          >
+            <Trash2 className="w-4 h-4" />
+            {isSubmitting ? 'Eliminando...' : 'Eliminar'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

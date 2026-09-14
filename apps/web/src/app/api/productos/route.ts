@@ -67,3 +67,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message || 'Error al crear producto', details: error }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+    const { ids } = await request.json();
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: 'No se enviaron IDs válidos' }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from('productos')
+      .delete()
+      .in('id', ids)
+      .eq('usuario_id', user.id); // Ensure user can only delete their own
+
+    if (error) {
+      console.error("DELETE DB Error:", error);
+      throw error;
+    }
+    
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error: any) {
+    console.error("DELETE Catch Error:", error);
+    return NextResponse.json({ error: 'Error al eliminar productos' }, { status: 500 });
+  }
+}

@@ -91,7 +91,7 @@ export default function ServiciosMasterView({
                       <span className="font-bold text-slate-800 text-lg tracking-wide capitalize">{(s.nombreProveedor || s.nombre_proveedor || '').toLowerCase()}</span>
                       {s.facturas && s.facturas.length > 0 && (
                         <span className={`text-[10px] font-bold uppercase tracking-wider ${s.facturas.some(f => f.estado === 'PENDIENTE') ? 'text-red-500' : 'text-emerald-500'}`}>
-                          {s.facturas.some(f => f.estado === 'PENDIENTE') ? 'Con deuda' : 'Al día'}
+                          {s.facturas.some(f => f.estado === 'PENDIENTE') ? 'Pendiente de pago' : 'Al día'}
                         </span>
                       )}
                     </div>

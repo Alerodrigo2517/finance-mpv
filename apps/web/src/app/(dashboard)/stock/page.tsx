@@ -55,6 +55,23 @@ export default function StockPage() {
     }
   };
 
+  const handleDeleteProductos = async (ids: string[]) => {
+    const res = await fetch('/api/productos', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+    if (res.ok) {
+      if (selectedProductoId && ids.includes(selectedProductoId)) {
+        setSelectedProductoId(null);
+      }
+      await fetchData();
+    } else {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al eliminar productos');
+    }
+  };
+
   const handleAddPrecio = async (productoId: string, data: { supermercado: string; precio: number; fecha: string }) => {
     const res = await fetch('/api/precios', {
       method: 'POST',
@@ -105,7 +122,7 @@ export default function StockPage() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-80px)] md:h-[calc(100vh-100px)] gap-6 overflow-hidden animate-in fade-in duration-300">
+    <div className="flex flex-col md:flex-row h-[calc(100dvh-150px)] md:h-[calc(100vh-100px)] gap-6 overflow-hidden animate-in fade-in duration-300">
       
       {/* Sidebar - Master View */}
       <div className={`w-full md:w-80 shrink-0 h-full flex flex-col ${selectedProductoId ? 'hidden md:flex' : 'flex'}`}>
@@ -115,6 +132,7 @@ export default function StockPage() {
           onSelect={setSelectedProductoId}
           onAdd={handleAddProducto}
           onScanClick={() => setShowScanner(true)}
+          onDelete={handleDeleteProductos}
         />
       </div>
 

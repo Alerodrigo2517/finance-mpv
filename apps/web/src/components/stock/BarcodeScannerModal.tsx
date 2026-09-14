@@ -12,36 +12,47 @@ export default function BarcodeScannerModal({ onClose, onScanSuccess }: Props) {
   const [loadingProduct, setLoadingProduct] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+
+  const stopScanner = async () => {
+    if (scannerRef.current) {
+      try {
+        if (scannerRef.current.isScanning) {
+          await scannerRef.current.stop();
+        }
+        scannerRef.current.clear();
+      } catch (e) {
+        console.error("Error stopping scanner", e);
+      }
+      scannerRef.current = null;
+    }
+    setScanning(false);
+  };
 
   useEffect(() => {
     return () => {
-      // Cleanup scanner on unmount
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(e => console.error(e));
-      }
+      stopScanner();
     };
   }, []);
 
   const startScanner = () => {
     setScanning(true);
     setErrorMsg('');
-    setTimeout(() => {
-      scannerRef.current = new Html5QrcodeScanner(
-        "reader",
-        { fps: 10, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 },
-        false
-      );
-      
-      scannerRef.current.render(onScan, onScanError);
+    setTimeout(async () => {
+      try {
+        scannerRef.current = new Html5Qrcode("reader");
+        await scannerRef.current.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 },
+          onScan,
+          onScanError
+        );
+      } catch (err) {
+        console.error(err);
+        setErrorMsg('Error al acceder a la cámara trasera. Revisa los permisos.');
+        setScanning(false);
+      }
     }, 100);
-  };
-
-  const stopScanner = () => {
-    if (scannerRef.current) {
-      scannerRef.current.clear().catch(e => console.error(e));
-    }
-    setScanning(false);
   };
 
   const onScan = async (decodedText: string) => {

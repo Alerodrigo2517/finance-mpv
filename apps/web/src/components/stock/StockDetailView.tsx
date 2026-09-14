@@ -137,12 +137,12 @@ export default function StockDetailView({ producto, onRefresh, onAddPrecio, onBa
                   .map((p, idx, arr) => {
                     const isCheapest = p.precio === Math.min(...arr.map(x => x.precio));
                     return (
-                      <div key={p.id} className="flex justify-between items-center p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors shadow-sm">
-                        <div className="flex flex-col gap-1">
+                      <div key={p.id} className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors shadow-sm gap-3 sm:gap-0">
+                        <div className="flex flex-col gap-1 w-full sm:w-auto">
                           <span className="font-bold text-slate-800">{p.supermercado}</span>
                           <span className="text-xs text-slate-500">{new Date(p.fecha).toLocaleDateString('es-AR')}</span>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-between w-full sm:w-auto sm:justify-end gap-3">
                           {isCheapest && <span className="text-[10px] bg-emerald-100 text-emerald-700 font-extrabold uppercase px-2 py-1 rounded-md tracking-wider">Mejor Opción</span>}
                           <span className="font-extrabold text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg text-sm">
                             ${p.precio.toLocaleString()}
