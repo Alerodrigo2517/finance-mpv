@@ -118,12 +118,27 @@ export interface Vehiculo {
   combustibles?: CombustibleVehiculo[];
 }
 
-export interface Stock {
+export interface PrecioSupermercado {
+  id: string;
+  producto_id?: string;
+  supermercado: string;
+  precio: number;
+  fecha: string;
+  created_at?: string;
+}
+
+export interface ListaCompras {
+  id: string;
+  producto_id?: string;
+  cantidad_deseada: number;
+  completado: boolean;
+  created_at?: string;
+}
+
+export interface StockCasa {
   id: string;
   producto_id?: string;
   cantidad: number;
-  precio_compra?: number;
-  fecha_ingreso?: string;
   created_at?: string;
 }
 
@@ -131,9 +146,11 @@ export interface Producto {
   id: string;
   usuario_id?: string;
   nombre: string;
-  categoria: string;
+  categoria?: string;
   codigo_barra?: string;
-  codigoBarra?: string;
+  imagen_url?: string;
   created_at?: string;
-  stocks?: Stock[];
+  stock_casa?: StockCasa[];
+  lista_compras?: ListaCompras[];
+  precios_supermercados?: PrecioSupermercado[];
 }

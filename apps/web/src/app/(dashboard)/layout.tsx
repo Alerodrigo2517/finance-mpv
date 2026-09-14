@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import LogoutButton from '@/components/LogoutButton';
-import { Wallet, Bell, Grid, MoreHorizontal, LayoutDashboard, ArrowRightLeft, Receipt, Settings, X } from 'lucide-react';
+import { Wallet, Bell, Grid, MoreHorizontal, LayoutDashboard, ArrowRightLeft, Receipt, Settings, X, ShoppingCart } from 'lucide-react';
 
 export default function DashboardLayout({
   children,
@@ -16,6 +16,7 @@ export default function DashboardLayout({
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/movimientos', label: 'Movimientos', icon: ArrowRightLeft },
     { href: '/servicios', label: 'Servicios', icon: Receipt },
+    { href: '/stock', label: 'Stock & Compras', icon: ShoppingCart },
     { href: '/herramientas', label: 'Herramientas', icon: Grid },
     { href: '/configuracion', label: 'Configuración', icon: Settings },
   ];
@@ -24,6 +25,7 @@ export default function DashboardLayout({
     { href: '/', label: 'Resumen', icon: LayoutDashboard },
     { href: '/movimientos', label: 'Movimientos', icon: ArrowRightLeft },
     { href: '/servicios', label: 'Servicios', icon: Receipt },
+    { href: '/stock', label: 'Stock', icon: ShoppingCart },
   ];
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

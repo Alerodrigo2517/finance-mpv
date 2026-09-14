@@ -7,15 +7,21 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     
+    // Fetch products along with their stock, shopping list status, and prices
     const { data: productos, error } = await supabase
       .from('productos')
-      .select('*, stocks(*)')
-      .eq('usuario_id', user.id);
+      .select(`
+        *, 
+        stock_casa(*), 
+        lista_compras(*), 
+        precios_supermercados(*)
+      `)
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
     return NextResponse.json(productos);
   } catch (error) {
-    return NextResponse.json({ error: 'Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Error al obtener productos' }, { status: 500 });
   }
 }
 
@@ -27,42 +33,23 @@ export async function POST(request: Request) {
 
     const data = await request.json();
 
-    const { data: producto, error: prodError } = await supabase
+    // Upsert the product
+    const { data: producto, error } = await supabase
       .from('productos')
-      .insert({
-        nombre: data.nombre,
-        codigo_barra: data.codigoBarras,
-        categoria: data.categoria || 'General',
+      .upsert({
+        id: data.id, // Will insert new if null, update if exists
         usuario_id: user.id,
-      })
+        nombre: data.nombre,
+        categoria: data.categoria || null,
+        codigo_barra: data.codigo_barra || null,
+        imagen_url: data.imagen_url || null,
+      }, { onConflict: 'id' })
       .select()
       .single();
 
-    if (prodError) throw prodError;
-
-    if (producto) {
-      const { error: stockError } = await supabase
-        .from('stocks')
-        .insert({
-          producto_id: producto.id,
-          cantidad: parseFloat(data.cantidad || '1'),
-          estado: 'DISPONIBLE',
-          usuario_id: user.id,
-        });
-      
-      if (stockError) throw stockError;
-    }
-
-    const { data: fullProduct, error: fetchError } = await supabase
-      .from('productos')
-      .select('*, stocks(*)')
-      .eq('id', producto.id)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    return NextResponse.json(fullProduct, { status: 201 });
+    if (error) throw error;
+    return NextResponse.json(producto, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: 'Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Error al crear producto' }, { status: 500 });
   }
 }

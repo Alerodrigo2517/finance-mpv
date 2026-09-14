@@ -1,129 +1,156 @@
 'use client';
-import { useState, useEffect } from 'react';
-import BlankState from '@/components/ui/BlankState';
-import PageHeader from '@/components/ui/PageHeader';
-import { ShoppingBag, Search } from 'lucide-react';
-
-import { Producto, Stock } from '@/types';
+import { useState, useEffect, useCallback } from 'react';
+import { Producto } from '@/types';
+import { Loader2 } from 'lucide-react';
+import StockMasterView from '@/components/stock/StockMasterView';
+import StockDetailView from '@/components/stock/StockDetailView';
+import BarcodeScannerModal from '@/components/stock/BarcodeScannerModal';
 
 export default function StockPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedProductoId, setSelectedProductoId] = useState<string | null>(null);
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
 
-  const [showForm, setShowForm] = useState(false);
-  const [nombre, setNombre] = useState('');
-  const [categoria, setCategoria] = useState('');
-  const [codigoBarras, setCodigoBarras] = useState('');
-  const [cantidad, setCantidad] = useState('1');
-
-  const fetchData = async () => {
-    try {
-      const res = await fetch('/api/productos');
-      if (res.ok) setProductos(await res.json());
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+  const showError = (msg: string) => {
+    setGlobalError(msg);
+    setTimeout(() => setGlobalError(null), 3000);
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const fetchData = useCallback(async () => {
     try {
-      const res = await fetch('/api/productos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, categoria, codigoBarras, cantidad }),
-      });
+      const res = await fetch('/api/productos');
       if (res.ok) {
-        setNombre(''); setCategoria(''); setCodigoBarras(''); setCantidad('1');
-        setShowForm(false);
-        fetchData();
+        const data = await res.json();
+        setProductos(data);
+      } else {
+        showError('No se pudieron cargar los productos');
       }
     } catch (e) {
       console.error(e);
+      showError('Error de conexión al cargar los productos');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleAddProducto = async (data: { nombre: string; categoria?: string; codigo_barra?: string; imagen_url?: string }) => {
+    const res = await fetch('/api/productos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) {
+      const newProd = await res.json();
+      await fetchData();
+      setSelectedProductoId(newProd.id);
+    } else {
+      throw new Error('Error al guardar el producto');
     }
   };
 
-  return (
-    <div className="flex flex-col h-full gap-6">
-      <PageHeader 
-        title="Control de Stock y Compras" 
-        subtitle="Alimentos y artículos del hogar"
-      />
+  const handleAddPrecio = async (productoId: string, data: { supermercado: string; precio: number; fecha: string }) => {
+    const res = await fetch('/api/precios', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ producto_id: productoId, ...data })
+    });
+    if (res.ok) {
+      await fetchData();
+    } else {
+      throw new Error('Error al registrar el precio');
+    }
+  };
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        <div className="glass-panel p-8 flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <span className="text-xl font-semibold text-[#0F3160]">Productos Registrados</span>
-            <div className="flex gap-2">
-              <button className="btn-secondary text-sm px-3 py-1" onClick={() => setShowForm(!showForm)}>
-                {showForm ? 'Cancelar' : '+ Manual'}
-              </button>
-            </div>
-          </div>
+  const handleScanSuccess = async (barcodeData: { nombre: string; codigo_barra: string; imagen_url?: string; marca?: string }) => {
+    setShowScanner(false);
+    
+    // Check if product already exists locally
+    const existing = productos.find(p => p.codigo_barra === barcodeData.codigo_barra);
+    if (existing) {
+      setSelectedProductoId(existing.id);
+      return;
+    }
 
-          {showForm && (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3 mt-2 bg-slate-50 p-4 rounded-lg border border-slate-200">
-              <input type="text" placeholder="Nombre (Ej. Leche)" value={nombre} onChange={(e) => setNombre(e.target.value)} required className="input-field" />
-              <input type="text" placeholder="Categoría (Ej. Lácteos)" value={categoria} onChange={(e) => setCategoria(e.target.value)} required className="input-field" />
-              <input type="text" placeholder="Código de Barras (Opcional)" value={codigoBarras} onChange={(e) => setCodigoBarras(e.target.value)} className="input-field" />
-              <input type="number" placeholder="Cantidad" value={cantidad} onChange={(e) => setCantidad(e.target.value)} required min="1" className="input-field" />
-              <button type="submit" className="btn-primary">Guardar Producto</button>
-            </form>
-          )}
+    // Add new product
+    await handleAddProducto({
+      nombre: barcodeData.nombre + (barcodeData.marca ? ` (${barcodeData.marca})` : ''),
+      categoria: 'General',
+      codigo_barra: barcodeData.codigo_barra,
+      imagen_url: barcodeData.imagen_url,
+    });
+  };
 
-          <div className="mt-4 flex flex-col gap-2">
-            {loading ? <p className="text-slate-500 text-center py-8">Cargando...</p> :
-              productos.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-slate-200 rounded-xl mt-4">
-                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                    <Search className="w-8 h-8 text-slate-400" />
-                  </div>
-                  <h4 className="text-[#0F3160] font-bold mb-1">Sin productos registrados</h4>
-                  <p className="text-slate-500 text-sm max-w-[220px]">Agrega productos a tu inventario para comenzar a gestionar el stock.</p>
-                  <button onClick={() => setShowForm(true)} className="mt-4 text-primary font-medium text-sm hover:underline">
-                    + Cargar manualmente
-                  </button>
-                </div>
-              ) :
-                productos.map(p => {
-               const qty = p.stocks?.reduce((acc: number, s: Stock) => acc + s.cantidad, 0) || 0;
-               return (
-                 <div key={p.id} className="p-3 bg-slate-50 rounded-md border border-slate-200 flex justify-between items-center">
-                   <div>
-                     <span className="font-medium block">{p.nombre}</span>
-                     <span className="text-slate-500 text-sm">{p.categoria}</span>
-                   </div>
-                   <div className="text-right">
-                     <span className="font-semibold text-primary">{qty} uds</span>
-                     {p.codigoBarra && <span className="block text-slate-500 text-xs">#{p.codigoBarra}</span>}
-                   </div>
-                 </div>
-               );
-             })
-            }
-          </div>
-        </div>
+  const selectedProducto = productos.find(p => p.id === selectedProductoId);
 
-        <div className="glass-panel p-8 flex flex-col items-center justify-center min-h-[400px]">
-          <BlankState 
-            variant="empty-cart"
-            Icon={ShoppingBag}
-            title="Tu lista de compras está vacía"
-            description="Se generará sola cuando el stock de algún producto llegue a cero o esté cerca de agotarse."
-            action={
-              <button onClick={() => setShowForm(true)} className="bg-secondary hover:bg-secondaryHover text-white px-6 py-3 rounded-full font-semibold transition-colors shadow-sm">
-                + Agregar al Inventario
-              </button>
-            }
-          />
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="w-8 h-8 text-[#0F3160] animate-spin" />
+          <p className="text-slate-500 font-medium">Cargando productos...</p>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col md:flex-row h-[calc(100vh-80px)] md:h-[calc(100vh-100px)] gap-6 overflow-hidden animate-in fade-in duration-300">
+      
+      {/* Sidebar - Master View */}
+      <div className={`w-full md:w-80 shrink-0 h-full flex flex-col ${selectedProductoId ? 'hidden md:flex' : 'flex'}`}>
+        <StockMasterView 
+          productos={productos}
+          selectedId={selectedProductoId}
+          onSelect={setSelectedProductoId}
+          onAdd={handleAddProducto}
+          onScanClick={() => setShowScanner(true)}
+        />
+      </div>
+
+      {/* Main Content - Detail View */}
+      <div className={`flex-1 h-full min-w-0 ${!selectedProductoId ? 'hidden md:flex' : 'flex'}`}>
+        {selectedProducto ? (
+          <StockDetailView 
+            producto={selectedProducto}
+            onRefresh={fetchData}
+            onAddPrecio={(data) => handleAddPrecio(selectedProducto.id, data)}
+            onBack={() => setSelectedProductoId(null)}
+          />
+        ) : (
+          <div className="hidden md:flex w-full h-full items-center justify-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-slate-500">Selecciona un producto</h3>
+              <p className="text-sm text-slate-400 mt-1">O escanea un código de barras para agregarlo</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Barcode Scanner Modal */}
+      {showScanner && (
+        <BarcodeScannerModal 
+          onClose={() => setShowScanner(false)} 
+          onScanSuccess={handleScanSuccess} 
+        />
+      )}
+
+      {/* Global Toast Error */}
+      {globalError && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium z-[200] animate-in slide-in-from-bottom-2 duration-300">
+          {globalError}
+        </div>
+      )}
     </div>
   );
 }
