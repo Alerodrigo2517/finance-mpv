@@ -13,7 +13,7 @@ export default function StockPage() {
   const [selectedProductoId, setSelectedProductoId] = useState<string | null>(null);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const [scannedData, setScannedData] = useState<{ nombre: string; codigo_barra: string; imagen_url?: string; marca?: string; found: boolean } | null>(null);
+  const [scannedData, setScannedData] = useState<{ nombre: string; codigo_barra: string; imagen_url?: string; marca?: string; found: boolean; isExistingProduct?: boolean } | null>(null);
 
   const showError = (msg: string) => {
     setGlobalError(msg);
@@ -93,20 +93,91 @@ export default function StockPage() {
     // Check if product already exists locally
     const existing = productos.find(p => p.codigo_barra === barcodeData.codigo_barra);
     if (existing) {
-      setSelectedProductoId(existing.id);
+      setScannedData({
+        ...barcodeData,
+        nombre: existing.nombre,
+        imagen_url: existing.imagen_url || barcodeData.imagen_url,
+        marca: existing.categoria || barcodeData.marca,
+        isExistingProduct: true
+      });
       return;
     }
 
     setScannedData(barcodeData);
   };
 
-  const handleConfirmScannedProduct = async (data: { nombre: string; categoria?: string; codigo_barra?: string; imagen_url?: string }) => {
+  const handleConfirmScannedProduct = async (data: { nombre: string; categoria?: string; codigo_barra?: string; imagen_url?: string; cantidad: number; precio?: number }) => {
     try {
-      await handleAddProducto(data);
+      let productIdToUse = '';
+      
+      const existing = productos.find(p => p.codigo_barra === data.codigo_barra);
+      if (existing) {
+        productIdToUse = existing.id;
+      } else {
+        const res = await fetch('/api/productos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre: data.nombre,
+            categoria: data.categoria,
+            codigo_barra: data.codigo_barra,
+            imagen_url: data.imagen_url,
+          }),
+        });
+        if (!res.ok) {
+           const err = await res.json();
+           throw new Error(err.error || 'Error al crear producto');
+        }
+        const newProd = await res.json();
+        productIdToUse = newProd.id;
+      }
+
+      // 2. Add Stock
+      if (data.cantidad > 0) {
+         await fetch('/api/stock_casa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ producto_id: productIdToUse, cantidad: data.cantidad })
+         });
+      }
+
+      // 3. Add Price
+      if (data.precio) {
+         await fetch('/api/precios', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              producto_id: productIdToUse, 
+              supermercado: 'Carga Rápida', 
+              precio: data.precio, 
+              fecha: new Date().toISOString() 
+            })
+         });
+      }
+
+      await fetchData();
+      setSelectedProductoId(productIdToUse);
       setScannedData(null);
     } catch (e: any) {
       showError(e.message || 'Error al guardar el producto');
       throw e;
+    }
+  };
+
+  const handleToggleShoppingList = async (productoId: string, currentlyInList: boolean, listItemId?: string) => {
+    try {
+      if (currentlyInList && listItemId) {
+        await fetch(`/api/lista_compras?id=${listItemId}`, { method: 'DELETE' });
+      } else {
+        await fetch('/api/lista_compras', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ producto_id: productoId }),
+        });
+      }
+      await fetchData();
+    } catch (e) {
+      showError('Error al actualizar la lista de compras');
     }
   };
 
@@ -145,6 +216,7 @@ export default function StockPage() {
             producto={selectedProducto}
             onRefresh={fetchData}
             onAddPrecio={(data) => handleAddPrecio(selectedProducto.id, data)}
+            onToggleShoppingList={handleToggleShoppingList}
             onBack={() => setSelectedProductoId(null)}
           />
         ) : (

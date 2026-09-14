@@ -6,10 +6,11 @@ interface Props {
   producto: Producto;
   onRefresh: () => void;
   onAddPrecio: (data: { supermercado: string; precio: number; fecha: string }) => Promise<void>;
+  onToggleShoppingList: (productoId: string, currentlyInList: boolean, listItemId?: string) => Promise<void>;
   onBack: () => void;
 }
 
-export default function StockDetailView({ producto, onRefresh, onAddPrecio, onBack }: Props) {
+export default function StockDetailView({ producto, onRefresh, onAddPrecio, onToggleShoppingList, onBack }: Props) {
   const [activeTab, setActiveTab] = useState<'ALACENA' | 'PRECIOS' | 'COMPRAS'>('ALACENA');
   
   const [showAddPrecio, setShowAddPrecio] = useState(false);
@@ -25,6 +26,8 @@ export default function StockDetailView({ producto, onRefresh, onAddPrecio, onBa
   ];
 
   const stockQty = producto.stock_casa?.reduce((acc, s) => acc + s.cantidad, 0) || 0;
+  const inShoppingList = producto.lista_compras && producto.lista_compras.length > 0;
+  const [isTogglingList, setIsTogglingList] = useState(false);
 
   const handleSubmitPrecio = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +41,15 @@ export default function StockDetailView({ producto, onRefresh, onAddPrecio, onBa
       console.error(e);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleList = async () => {
+    setIsTogglingList(true);
+    try {
+      await onToggleShoppingList(producto.id, inShoppingList, producto.lista_compras?.[0]?.id);
+    } finally {
+      setIsTogglingList(false);
     }
   };
 
@@ -158,14 +170,28 @@ export default function StockDetailView({ producto, onRefresh, onAddPrecio, onBa
 
         {/* COMPRAS TAB */}
         {activeTab === 'COMPRAS' && (
-          <div className="flex flex-col items-center justify-center py-20 animate-in fade-in text-center px-4">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-              <ListTodo className="w-10 h-10 text-slate-300" />
+          <div className="flex flex-col items-center justify-center py-10 animate-in fade-in px-4">
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 transition-colors ${inShoppingList ? 'bg-blue-100 text-[#0F3160]' : 'bg-slate-50 text-slate-300'}`}>
+              <ListTodo className="w-12 h-12" />
             </div>
-            <h3 className="text-xl font-bold text-slate-700 mb-2">Sección en Construcción</h3>
-            <p className="text-slate-500 text-sm max-w-sm leading-relaxed">
-              Pronto podrás agregar este producto a tu lista interactiva del supermercado para no olvidarte de comprarlo.
+            <h3 className="text-xl font-bold text-slate-700 mb-2">Lista de Compras</h3>
+            <p className="text-slate-500 text-sm max-w-sm leading-relaxed text-center mb-8">
+              {inShoppingList 
+                ? 'Este producto ya se encuentra en tu lista del supermercado.' 
+                : 'Agrega este producto a tu lista interactiva del supermercado para no olvidarte de comprarlo.'}
             </p>
+            <button 
+              onClick={handleToggleList}
+              disabled={isTogglingList}
+              className={`font-bold py-3 px-6 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 min-w-[200px] disabled:opacity-50 ${
+                inShoppingList 
+                  ? 'bg-rose-50 text-rose-600 hover:bg-rose-100' 
+                  : 'bg-[#0F3160] text-white hover:bg-[#0a244a]'
+              }`}
+            >
+              {isTogglingList && <Loader2 className="w-4 h-4 animate-spin" />}
+              {!isTogglingList && (inShoppingList ? 'Quitar de la Lista' : 'Agregar a la Lista')}
+            </button>
           </div>
         )}
       </div>
