@@ -18,11 +18,17 @@ export default function StockMasterView({ productos, selectedId, onSelect, onSca
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<'TODOS' | 'COMPRAS'>('TODOS');
+  const [activeFilter, setActiveFilter] = useState<'ALACENA' | 'CATALOGO' | 'COMPRAS'>('ALACENA');
 
   const filtered = productos.filter(p => {
     const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || (p.categoria && p.categoria.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesTab = activeFilter === 'TODOS' || (activeFilter === 'COMPRAS' && p.lista_compras && p.lista_compras.length > 0);
+    const stockQty = p.stock_casa?.reduce((acc, s) => acc + s.cantidad, 0) || 0;
+    
+    const matchesTab = 
+      (activeFilter === 'CATALOGO') || 
+      (activeFilter === 'ALACENA' && stockQty > 0) ||
+      (activeFilter === 'COMPRAS' && p.lista_compras && p.lista_compras.length > 0);
+      
     return matchesSearch && matchesTab;
   });
 
@@ -98,18 +104,24 @@ export default function StockMasterView({ productos, selectedId, onSelect, onSca
         </div>
       </div>
 
-      <div className="flex border-b border-slate-100 px-4">
+      <div className="flex border-b border-slate-100 px-2 overflow-x-auto no-scrollbar">
         <button 
-          onClick={() => setActiveFilter('TODOS')}
-          className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeFilter === 'TODOS' ? 'border-[#0F3160] text-[#0F3160]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+          onClick={() => setActiveFilter('ALACENA')}
+          className={`flex-1 min-w-[100px] py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeFilter === 'ALACENA' ? 'border-[#0F3160] text-[#0F3160]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
         >
-          Inventario
+          📦 Alacena
+        </button>
+        <button 
+          onClick={() => setActiveFilter('CATALOGO')}
+          className={`flex-1 min-w-[100px] py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeFilter === 'CATALOGO' ? 'border-[#0F3160] text-[#0F3160]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+        >
+          🏷️ Catálogo
         </button>
         <button 
           onClick={() => setActiveFilter('COMPRAS')}
-          className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeFilter === 'COMPRAS' ? 'border-[#0F3160] text-[#0F3160]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+          className={`flex-1 min-w-[100px] py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeFilter === 'COMPRAS' ? 'border-[#0F3160] text-[#0F3160]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
         >
-          Lista del Súper
+          🛒 Lista del Súper
         </button>
       </div>
 

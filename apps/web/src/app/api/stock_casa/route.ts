@@ -10,10 +10,8 @@ export async function POST(request: Request) {
     const data = await request.json();
 
     const payload = {
-      usuario_id: user.id,
       producto_id: data.producto_id,
       cantidad: data.cantidad,
-      // If we need expiration dates or something else, we could add them here
     };
 
     const { data: inserted, error } = await supabase
