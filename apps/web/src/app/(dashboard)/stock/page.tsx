@@ -174,6 +174,25 @@ export default function StockPage() {
     }
   };
 
+  const handleAddManyToShoppingList = async (ids: string[]) => {
+    try {
+      // Verify which ones are not already in the list to avoid duplicates
+      const productsToAdd = productos.filter(p => ids.includes(p.id) && (!p.lista_compras || p.lista_compras.length === 0));
+      
+      await Promise.all(productsToAdd.map(p => 
+        fetch('/api/lista_compras', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ producto_id: p.id }),
+        })
+      ));
+      
+      await fetchData();
+    } catch (e) {
+      showError('Error al agregar a la lista de compras');
+    }
+  };
+
   const handleUpdateStock = async (productoId: string, cantidad: number) => {
     try {
       const res = await fetch('/api/stock_casa', {
@@ -207,11 +226,13 @@ export default function StockPage() {
       {/* Sidebar - Master View */}
       <div className={`w-full md:w-80 shrink-0 h-full flex flex-col ${selectedProductoId ? 'hidden md:flex' : 'flex'}`}>
         <StockMasterView 
-          productos={productos}
-          selectedId={selectedProductoId}
+          productos={productos} 
+          selectedId={selectedProductoId} 
           onSelect={setSelectedProductoId}
           onScanClick={() => setShowScanner(true)}
           onManualAdd={handleManualAdd}
+          onToggleShoppingList={handleToggleShoppingList}
+          onAddManyToShoppingList={handleAddManyToShoppingList}
           onDelete={handleDeleteProductos}
         />
       </div>

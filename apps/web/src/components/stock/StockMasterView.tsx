@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Producto } from '@/types';
 import ConfirmModal from '@/components/ui/ConfirmModal';
-import { Plus, Search, Package, ScanLine, Trash2, ListChecks, X } from 'lucide-react';
+import { Plus, Search, Package, ScanLine, Trash2, ListChecks, X, ShoppingCart } from 'lucide-react';
 
 interface Props {
   productos: Producto[];
@@ -9,10 +9,12 @@ interface Props {
   onSelect: (id: string) => void;
   onScanClick: () => void;
   onManualAdd: () => void;
+  onToggleShoppingList: (id: string, inList: boolean, listId?: string) => Promise<void>;
+  onAddManyToShoppingList: (ids: string[]) => Promise<void>;
   onDelete?: (ids: string[]) => Promise<void>;
 }
 
-export default function StockMasterView({ productos, selectedId, onSelect, onScanClick, onManualAdd, onDelete }: Props) {
+export default function StockMasterView({ productos, selectedId, onSelect, onScanClick, onManualAdd, onToggleShoppingList, onAddManyToShoppingList, onDelete }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -50,6 +52,20 @@ export default function StockMasterView({ productos, selectedId, onSelect, onSca
       setIsSelectionMode(false);
       setSelectedIds([]);
       setShowConfirmDelete(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleBulkAddToShoppingList = async () => {
+    if (selectedIds.length === 0) return;
+    setIsSubmitting(true);
+    try {
+      await onAddManyToShoppingList(selectedIds);
+      setIsSelectionMode(false);
+      setSelectedIds([]);
     } catch (e) {
       console.error(e);
     } finally {
@@ -134,6 +150,7 @@ export default function StockMasterView({ productos, selectedId, onSelect, onSca
         ) : (
           filtered.map(p => {
             const stockQty = p.stock_casa?.reduce((acc, s) => acc + s.cantidad, 0) || 0;
+            const inShoppingList = p.lista_compras && p.lista_compras.length > 0;
             return (
               <button
                 key={p.id}
@@ -170,11 +187,23 @@ export default function StockMasterView({ productos, selectedId, onSelect, onSca
                   <span className="font-bold text-slate-800 truncate">{p.nombre}</span>
                   {p.categoria && <span className="text-xs text-slate-500 truncate">{p.categoria}</span>}
                 </div>
-                <div className="flex flex-col items-end shrink-0">
-                  <span className={`text-sm font-extrabold ${stockQty > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                    {stockQty} ud
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Stock</span>
+                <div className="flex flex-col items-end shrink-0 gap-2">
+                  <div className="flex flex-col items-end">
+                    <span className={`text-sm font-extrabold ${stockQty > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                      {stockQty} ud
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Stock</span>
+                  </div>
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleShoppingList(p.id, !!inShoppingList, p.lista_compras?.[0]?.id);
+                    }}
+                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${inShoppingList ? 'bg-blue-100 text-[#0F3160]' : 'bg-slate-100 text-slate-400 hover:bg-blue-50 hover:text-[#0F3160]'}`}
+                    title={inShoppingList ? "Quitar de lista" : "Agregar a lista"}
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                  </div>
                 </div>
               </button>
             );
@@ -183,18 +212,28 @@ export default function StockMasterView({ productos, selectedId, onSelect, onSca
       </div>
 
       {isSelectionMode && (
-        <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between animate-in slide-in-from-bottom-2">
-          <span className="text-sm font-medium text-slate-600">
+        <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between animate-in slide-in-from-bottom-2 gap-2 overflow-x-auto">
+          <span className="text-sm font-medium text-slate-600 flex-1 whitespace-nowrap hidden sm:inline-block">
             {selectedIds.length} seleccionado(s)
           </span>
-          <button 
-            onClick={handleDeleteSelected}
-            disabled={selectedIds.length === 0 || isSubmitting}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-          >
-            <Trash2 className="w-4 h-4" />
-            Eliminar
-          </button>
+          <div className="flex gap-2 ml-auto">
+            <button 
+              onClick={handleBulkAddToShoppingList}
+              disabled={selectedIds.length === 0 || isSubmitting}
+              className="flex items-center gap-2 px-4 py-2 bg-[#0F3160] text-white font-bold rounded-xl hover:bg-[#0a244a] disabled:opacity-50 transition-colors text-sm whitespace-nowrap"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span className="hidden sm:inline">Al Súper</span>
+            </button>
+            <button 
+              onClick={handleDeleteSelected}
+              disabled={selectedIds.length === 0 || isSubmitting}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors text-sm whitespace-nowrap"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Eliminar</span>
+            </button>
+          </div>
         </div>
       )}
 
