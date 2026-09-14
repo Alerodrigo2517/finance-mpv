@@ -41,37 +41,30 @@ export default function StockPage() {
     fetchData();
   }, [fetchData]);
 
-  const handleAddProducto = async (data: { nombre: string; categoria?: string; codigo_barra?: string; imagen_url?: string }) => {
-    const res = await fetch('/api/productos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (res.ok) {
-      const newProd = await res.json();
-      await fetchData();
-      setSelectedProductoId(newProd.id);
-    } else {
-      const err = await res.json();
-      throw new Error(err.error || 'Error al guardar el producto');
-    }
-  };
-
   const handleDeleteProductos = async (ids: string[]) => {
-    const res = await fetch('/api/productos', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids }),
-    });
-    if (res.ok) {
+    try {
+      const res = await fetch('/api/productos', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) throw new Error();
       if (selectedProductoId && ids.includes(selectedProductoId)) {
         setSelectedProductoId(null);
       }
       await fetchData();
-    } else {
-      const err = await res.json();
-      throw new Error(err.error || 'Error al eliminar productos');
+    } catch (e) {
+      showError('Error al eliminar productos');
     }
+  };
+
+  const handleManualAdd = () => {
+    setScannedData({
+      nombre: '',
+      codigo_barra: '',
+      found: false,
+      isExistingProduct: false
+    });
   };
 
   const handleAddPrecio = async (productoId: string, data: { supermercado: string; precio: number; fecha: string }) => {
@@ -120,7 +113,7 @@ export default function StockPage() {
           body: JSON.stringify({
             nombre: data.nombre,
             categoria: data.categoria,
-            codigo_barra: data.codigo_barra,
+            codigo_barra: data.codigo_barra || undefined, // Allow empty string to become undefined so backend can handle/generate if needed
             imagen_url: data.imagen_url,
           }),
         });
@@ -181,6 +174,20 @@ export default function StockPage() {
     }
   };
 
+  const handleUpdateStock = async (productoId: string, cantidad: number) => {
+    try {
+      const res = await fetch('/api/stock_casa', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ producto_id: productoId, cantidad })
+      });
+      if (!res.ok) throw new Error();
+      await fetchData();
+    } catch(e) {
+      showError('Error al actualizar el stock');
+    }
+  };
+
   const selectedProducto = productos.find(p => p.id === selectedProductoId);
 
   if (loading) {
@@ -203,8 +210,8 @@ export default function StockPage() {
           productos={productos}
           selectedId={selectedProductoId}
           onSelect={setSelectedProductoId}
-          onAdd={handleAddProducto}
           onScanClick={() => setShowScanner(true)}
+          onManualAdd={handleManualAdd}
           onDelete={handleDeleteProductos}
         />
       </div>
@@ -217,6 +224,7 @@ export default function StockPage() {
             onRefresh={fetchData}
             onAddPrecio={(data) => handleAddPrecio(selectedProducto.id, data)}
             onToggleShoppingList={handleToggleShoppingList}
+            onUpdateStock={(cantidad) => handleUpdateStock(selectedProducto.id, cantidad)}
             onBack={() => setSelectedProductoId(null)}
           />
         ) : (

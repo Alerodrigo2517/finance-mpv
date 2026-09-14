@@ -142,7 +142,7 @@ export default function ScannedProductConfirmModal({ initialData, onConfirm, onC
             </div>
           </div>
           
-          {!initialData.isExistingProduct && (
+          {!initialData.isExistingProduct && initialData.codigo_barra && (
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Código Escaneado</label>
               <div className="w-full bg-slate-100/50 border border-slate-200/50 rounded-xl px-4 py-3 text-sm text-slate-500 font-mono select-all">

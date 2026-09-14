@@ -7,10 +7,11 @@ interface Props {
   onRefresh: () => void;
   onAddPrecio: (data: { supermercado: string; precio: number; fecha: string }) => Promise<void>;
   onToggleShoppingList: (productoId: string, currentlyInList: boolean, listItemId?: string) => Promise<void>;
+  onUpdateStock: (cantidad: number) => Promise<void>;
   onBack: () => void;
 }
 
-export default function StockDetailView({ producto, onRefresh, onAddPrecio, onToggleShoppingList, onBack }: Props) {
+export default function StockDetailView({ producto, onRefresh, onAddPrecio, onToggleShoppingList, onUpdateStock, onBack }: Props) {
   const [activeTab, setActiveTab] = useState<'ALACENA' | 'PRECIOS' | 'COMPRAS'>('ALACENA');
   
   const [showAddPrecio, setShowAddPrecio] = useState(false);
@@ -28,6 +29,7 @@ export default function StockDetailView({ producto, onRefresh, onAddPrecio, onTo
   const stockQty = producto.stock_casa?.reduce((acc, s) => acc + s.cantidad, 0) || 0;
   const inShoppingList = !!(producto.lista_compras && producto.lista_compras.length > 0);
   const [isTogglingList, setIsTogglingList] = useState(false);
+  const [isUpdatingStock, setIsUpdatingStock] = useState(false);
 
   const handleSubmitPrecio = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +52,15 @@ export default function StockDetailView({ producto, onRefresh, onAddPrecio, onTo
       await onToggleShoppingList(producto.id, inShoppingList, producto.lista_compras?.[0]?.id);
     } finally {
       setIsTogglingList(false);
+    }
+  };
+
+  const handleStockUpdate = async (cantidad: number) => {
+    setIsUpdatingStock(true);
+    try {
+      await onUpdateStock(cantidad);
+    } finally {
+      setIsUpdatingStock(false);
     }
   };
 
@@ -124,8 +135,20 @@ export default function StockDetailView({ producto, onRefresh, onAddPrecio, onTo
               Actualmente tienes {stockQty} {stockQty === 1 ? 'unidad' : 'unidades'} de este producto en tu alacena.
             </p>
             <div className="flex gap-4 w-full max-w-xs">
-              <button className="flex-1 bg-rose-50 text-rose-600 font-bold py-3 rounded-xl hover:bg-rose-100 transition-colors">-1</button>
-              <button className="flex-1 bg-emerald-50 text-emerald-600 font-bold py-3 rounded-xl hover:bg-emerald-100 transition-colors">+1</button>
+              <button 
+                onClick={() => handleStockUpdate(-1)}
+                disabled={isUpdatingStock || stockQty <= 0}
+                className="flex-1 bg-rose-50 text-rose-600 font-bold py-3 rounded-xl hover:bg-rose-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
+              >
+                {isUpdatingStock ? <Loader2 className="w-5 h-5 animate-spin" /> : '-1'}
+              </button>
+              <button 
+                onClick={() => handleStockUpdate(1)}
+                disabled={isUpdatingStock}
+                className="flex-1 bg-emerald-50 text-emerald-600 font-bold py-3 rounded-xl hover:bg-emerald-100 transition-colors disabled:opacity-50 flex justify-center items-center"
+              >
+                {isUpdatingStock ? <Loader2 className="w-5 h-5 animate-spin" /> : '+1'}
+              </button>
             </div>
           </div>
         )}

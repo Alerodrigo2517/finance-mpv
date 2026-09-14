@@ -7,41 +7,24 @@ interface Props {
   productos: Producto[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  onAdd: (data: { nombre: string; categoria?: string; codigo_barra?: string }) => Promise<void>;
   onScanClick: () => void;
+  onManualAdd: () => void;
   onDelete?: (ids: string[]) => Promise<void>;
 }
 
-export default function StockMasterView({ productos, selectedId, onSelect, onAdd, onScanClick, onDelete }: Props) {
+export default function StockMasterView({ productos, selectedId, onSelect, onScanClick, onManualAdd, onDelete }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [nombre, setNombre] = useState('');
-  const [categoria, setCategoria] = useState('');
-  const [codigo, setCodigo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'TODOS' | 'COMPRAS'>('TODOS');
 
-  const filtered = productos.filter(p => 
-    p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (p.categoria && p.categoria.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nombre) return;
-    setIsSubmitting(true);
-    try {
-      await onAdd({ nombre, categoria, codigo_barra: codigo });
-      setNombre(''); setCategoria(''); setCodigo('');
-      setShowAddForm(false);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const filtered = productos.filter(p => {
+    const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || (p.categoria && p.categoria.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesTab = activeFilter === 'TODOS' || (activeFilter === 'COMPRAS' && p.lista_compras && p.lista_compras.length > 0);
+    return matchesSearch && matchesTab;
+  });
 
   const toggleSelection = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -94,10 +77,11 @@ export default function StockMasterView({ productos, selectedId, onSelect, onAdd
               <ScanLine className="w-5 h-5" />
             </button>
             <button 
-              onClick={() => setShowAddForm(!showAddForm)}
+              onClick={onManualAdd}
               className="w-10 h-10 flex items-center justify-center bg-[#0F3160] text-white rounded-xl hover:bg-[#0a244a] transition-colors shadow-sm"
+              title="Carga Manual"
             >
-              <Plus className={`w-5 h-5 transition-transform ${showAddForm ? 'rotate-45' : ''}`} />
+              <Plus className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -114,18 +98,23 @@ export default function StockMasterView({ productos, selectedId, onSelect, onAdd
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
-        {showAddForm && (
-          <form onSubmit={handleSubmit} className="mb-4 p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-3 animate-in slide-in-from-top-2">
-            <h3 className="font-bold text-sm text-slate-700">Nuevo Producto (Manual)</h3>
-            <input type="text" placeholder="Nombre" value={nombre} onChange={e => setNombre(e.target.value)} required className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20" />
-            <input type="text" placeholder="Categoría (Ej. Bebidas)" value={categoria} onChange={e => setCategoria(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20" />
-            <input type="text" placeholder="Código (Opcional)" value={codigo} onChange={e => setCodigo(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20" />
-            <button type="submit" disabled={isSubmitting} className="w-full bg-[#0F3160] text-white font-bold py-2 rounded-xl text-sm mt-1">{isSubmitting ? 'Guardando...' : 'Guardar'}</button>
-          </form>
-        )}
+      <div className="flex border-b border-slate-100 px-4">
+        <button 
+          onClick={() => setActiveFilter('TODOS')}
+          className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeFilter === 'TODOS' ? 'border-[#0F3160] text-[#0F3160]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+        >
+          Inventario
+        </button>
+        <button 
+          onClick={() => setActiveFilter('COMPRAS')}
+          className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeFilter === 'COMPRAS' ? 'border-[#0F3160] text-[#0F3160]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+        >
+          Lista del Súper
+        </button>
+      </div>
 
-        {filtered.length === 0 && !showAddForm ? (
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+        {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-slate-400 text-sm">
             <Package className="w-8 h-8 mb-2 opacity-20" />
             No se encontraron productos
