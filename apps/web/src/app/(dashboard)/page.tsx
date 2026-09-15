@@ -79,7 +79,7 @@ export default async function Home() {
             <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">
               {saldo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
             </h1>
-            <span className={`text-xl font-medium ${saldo >= 0 ? 'text-primary' : 'text-danger'}`}>
+            <span className={`text-xl font-medium ${saldo >= 0 ? 'text-green-600' : 'text-danger'}`}>
               Saldo Actual
             </span>
           </div>
@@ -128,7 +128,7 @@ export default async function Home() {
                        {new Date(m.fecha).toLocaleDateString()} {m.descripcion ? `• ${m.descripcion}` : ''}
                      </span>
                    </div>
-                   <span className={`font-bold tracking-tight ${m.tipo === 'INGRESO' ? 'text-primary' : 'text-danger'}`}>
+                   <span className={`font-bold tracking-tight ${m.tipo === 'INGRESO' ? 'text-green-600' : 'text-danger'}`}>
                      {m.tipo === 'INGRESO' ? '+' : '-'}{Number(m.monto).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
                    </span>
                  </div>

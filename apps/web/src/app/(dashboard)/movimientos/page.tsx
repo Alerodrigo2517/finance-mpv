@@ -355,12 +355,12 @@ function MovimientosContent() {
                     />
                   </td>
                   <td className="p-4 border-b border-slate-200 text-[#0F3160] font-medium">{new Date(m.fecha).toLocaleDateString()}</td>
-                  <td className={`p-4 border-b border-slate-200 font-semibold ${m.tipo === 'INGRESO' ? 'text-primary' : 'text-danger'}`}>
+                  <td className={`p-4 border-b border-slate-200 font-semibold ${m.tipo === 'INGRESO' ? 'text-green-600' : 'text-danger'}`}>
                     {m.tipo}
                   </td>
                   <td className="p-4 border-b border-slate-200 text-[#0F3160] font-medium">{m.categoria}</td>
                   <td className="p-4 border-b border-slate-200 text-slate-600">{m.descripcion || '-'}</td>
-                  <td className={`p-4 border-b border-slate-200 font-semibold ${m.tipo === 'INGRESO' ? 'text-primary' : 'text-danger'}`}>
+                  <td className={`p-4 border-b border-slate-200 font-semibold ${m.tipo === 'INGRESO' ? 'text-green-600' : 'text-danger'}`}>
                     {Number(m.monto).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
                   </td>
                   <td className="p-4 border-b border-slate-200 text-right">
@@ -416,7 +416,7 @@ function MovimientosContent() {
                     <span className="text-xs font-medium text-slate-500">{new Date(m.fecha).toLocaleDateString()}</span>
                   </div>
                 </div>
-                <span className={`font-bold text-lg whitespace-nowrap ${m.tipo === 'INGRESO' ? 'text-primary' : 'text-danger'}`}>
+                <span className={`font-bold text-lg whitespace-nowrap ${m.tipo === 'INGRESO' ? 'text-green-600' : 'text-danger'}`}>
                   {m.tipo === 'INGRESO' ? '+' : '-'}{Number(m.monto).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
                 </span>
               </div>

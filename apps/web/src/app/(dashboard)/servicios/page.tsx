@@ -83,9 +83,13 @@ export default function ServiciosPage() {
         setSNombre(''); setSCuenta(''); setSMedidor(''); setSMonto(''); setSVencimiento('');
         setShowServicioForm(false);
         fetchData();
+      } else {
+        const data = await res.json();
+        showError(data.error || 'Error al crear servicio');
       }
     } catch (e) {
       console.error(e);
+      showError('Error de conexión');
     }
   };
 

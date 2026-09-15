@@ -28,6 +28,18 @@ export async function POST(request: Request) {
 
     const data = await request.json();
 
+    // Check for duplicates
+    const { data: existing, error: searchError } = await supabase
+      .from('servicios')
+      .select('id')
+      .eq('usuario_id', user.id)
+      .ilike('nombre_proveedor', data.nombre)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({ error: `Ya tienes registrado el servicio de ${data.nombre}.` }, { status: 400 });
+    }
+
     const { data: nuevoServicio, error: servicioError } = await supabase
       .from('servicios')
       .insert({
