@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Loader2, UploadCloud, DollarSign, Calendar, Zap, Image as ImageIcon } from 'lucide-react';
 import BarcodeScanner from '@/components/BarcodeScanner';
+import CurrencyInput from '@/components/ui/CurrencyInput';
 
 interface UploadFacturaFormProps {
   servicioId: string;
@@ -170,7 +171,7 @@ export default function UploadFacturaForm({ servicioId, onSuccess }: UploadFactu
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <DollarSign className="h-5 w-5 text-slate-400 group-focus-within:text-[#0F3160] transition-colors" />
                   </div>
-                  <input type="number" step="0.01" placeholder="0.00" value={mF_Monto} onChange={(e) => setMF_Monto(e.target.value)} required className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-[#0F3160]/30 focus:bg-white transition-all shadow-sm" />
+                  <CurrencyInput placeholder="0.00" value={mF_Monto} onChange={(val) => setMF_Monto(val)} required className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-[#0F3160]/30 focus:bg-white transition-all shadow-sm" />
                 </div>
               </div>
               
@@ -204,7 +205,7 @@ export default function UploadFacturaForm({ servicioId, onSuccess }: UploadFactu
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <Zap className="h-4 w-4 text-slate-400 group-focus-within:text-[#0F3160] transition-colors" />
                     </div>
-                    <input type="number" step="0.01" placeholder="Ej. 120" value={mF_Consumo} onChange={(e) => setMF_Consumo(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl pl-10 pr-3 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-[#0F3160]/30 focus:bg-white transition-all shadow-sm" />
+                    <CurrencyInput prefix="" placeholder="Ej. 120" value={mF_Consumo} onChange={(val) => setMF_Consumo(val)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl pl-10 pr-3 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-[#0F3160]/30 focus:bg-white transition-all shadow-sm" />
                   </div>
                 </div>
               </div>

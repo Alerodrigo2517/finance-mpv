@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Check, Search, Tag, Loader2, Image as ImageIcon, PackagePlus, DollarSign, ImageOff } from 'lucide-react';
+import CurrencyInput from '@/components/ui/CurrencyInput';
 
 interface Props {
   initialData: { nombre: string; codigo_barra: string; imagen_url?: string; marca?: string; found: boolean; isExistingProduct?: boolean };
@@ -152,13 +153,10 @@ export default function ScannedProductConfirmModal({ initialData, onConfirm, onC
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Precio (Opcional)</label>
               <div className="relative">
                 <DollarSign className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input 
-                  type="number" 
-                  min="0"
-                  step="0.01"
+                <CurrencyInput 
                   placeholder="Ej: 1500"
                   value={precio} 
-                  onChange={(e) => setPrecio(e.target.value)} 
+                  onChange={(val) => setPrecio(val)} 
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 transition-all"
                 />
               </div>

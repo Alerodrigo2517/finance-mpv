@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Producto } from '@/types';
 import { Package, ListTodo, TrendingDown, ArrowLeft, Plus, X, Loader2 } from 'lucide-react';
+import CurrencyInput from '@/components/ui/CurrencyInput';
 
 interface Props {
   producto: Producto;
@@ -229,7 +230,7 @@ export default function StockDetailView({ producto, onRefresh, onAddPrecio, onTo
             </div>
             <form onSubmit={handleSubmitPrecio} className="p-6 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5"><label className="text-xs font-bold text-slate-600">Supermercado</label><input type="text" placeholder="Ej. Carrefour, Coto" value={supermercado} onChange={(e) => setSupermercado(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20" /></div>
-              <div className="flex flex-col gap-1.5"><label className="text-xs font-bold text-slate-600">Precio ($)</label><input type="number" step="0.01" placeholder="Ej. 1500" value={precio} onChange={(e) => setPrecio(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20" /></div>
+              <div className="flex flex-col gap-1.5"><label className="text-xs font-bold text-slate-600">Precio ($)</label><CurrencyInput placeholder="Ej. 1500" value={precio} onChange={(val) => setPrecio(val)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20" /></div>
               <div className="flex flex-col gap-1.5"><label className="text-xs font-bold text-slate-600">Fecha</label><input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F3160]/20" /></div>
               <button type="submit" disabled={isSubmitting} className="w-full bg-[#0F3160] hover:bg-[#0a244a] text-white font-bold py-3.5 rounded-xl transition-all shadow-md mt-2 flex justify-center items-center gap-2">{isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Guardar'}</button>
             </form>

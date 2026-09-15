@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import PageHeader from '@/components/ui/PageHeader';
 import BlankState from '@/components/ui/BlankState';
+import CurrencyInput from '@/components/ui/CurrencyInput';
 import { ConfirmDeleteDialog } from '@/components/ui/ConfirmDeleteDialog';
 import { FileText, Edit2, Trash2, X } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -231,11 +232,9 @@ function MovimientosContent() {
           </div>
           <div className="flex flex-col gap-1 col-span-1">
             <label className="text-sm text-slate-500">Monto</label>
-            <input 
-              type="number" 
-              step="0.01" 
+            <CurrencyInput 
               value={monto} 
-              onChange={(e) => setMonto(e.target.value)} 
+              onChange={(val) => setMonto(val)} 
               required 
               placeholder="0.00"
               className="input-field"
